@@ -1,0 +1,14 @@
+# Documentación sensible (Indecopi, constancias, patentes, evidencias).
+Docs/
+
+# Salidas locales de plantillas Word en la raíz
+Documento_*.docx
+Plantilla_*.docx
+
+# Copias de entorno con secretos (nunca subir)
+*.env.txt
+backend/.env.txt
+
+# Python
+__pycache__/
+*.py[cod]
