@@ -1,0 +1,9 @@
+Prueba: Preflight CORS de /api/retina/analizar
+Archivo real ejecutado: backend/tests/Feature/RetinaCorsPreflightTest.php
+Comando: php artisan test
+Resultado: PASSED
+Checks validados:
+- status 200 en OPTIONS
+- header Access-Control-Allow-Origin = *
+- header Access-Control-Allow-Methods = POST, OPTIONS
+- header Access-Control-Allow-Headers = Content-Type, Authorization

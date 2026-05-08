@@ -8,109 +8,70 @@ Aplicación web **cliente-servidor** para apoyar la gestión de pacientes, el re
 
 | Capa | Tecnología |
 |------|------------|
+| Entorno local | **XAMPP** (Apache + MySQL/MariaDB + PHP) en Windows, o equivalente |
 | Backend | PHP 8.2+, **Laravel 12**, Laravel Sanctum |
 | Frontend | **React 19**, **Vite 8**, React Router, Axios, Bootstrap 5 |
-| Datos | Base relacional (por defecto **SQLite** en desarrollo; compatible con MySQL/MariaDB) |
+| Datos | MySQL/MariaDB (vía XAMPP) o **SQLite** para pruebas rápidas |
 | Informes | **DomPDF** (Laravel) |
 | IA | **Google Gemini** API (modelo configurado en código, p. ej. `gemini-2.5-flash`) |
 
 ## Estructura del proyecto
 
-En tu máquina el repositorio puede organizarse así (las carpetas bajo `Docs/` son **solo para uso local** o trámites; **no deben publicarse** en un GitHub abierto):
-
 ```
 optica_project/
 ├── backend/                      # API REST Laravel
 ├── frontend/                     # SPA React + Vite
-├── Docs/                         # Ver sección “Privacidad” — excluida del Git público
+├── Docs/                         # Documentación (patente, constancia, plan de pruebas, evidencias)
 │   ├── Constancia de Aprobacion/
 │   ├── Patente/
 │   ├── Plan de Pruebas/
 │   └── Pruebas_Evidencias/
 ├── README.md
-└── (scripts .py opcionales en raíz para generar Word, si los usas)
+└── .gitignore
 ```
 
-## Privacidad y qué conviene subir a GitHub
+Este repositorio es **privado**: `Docs/` puede estar en Git para tu respaldo. Si algún día el repo fuera **público**, convendría no incluir documentos con datos personales o legales sensibles.
 
-En un repositorio **público**, cualquiera puede clonar y descargar todo. Por eso **no es recomendable** incluir:
+## XAMPP (desarrollo en Windows)
 
-- Constancias, poderes, datos de representante legal o de la empresa más allá de lo estrictamente necesario.
-- Borradores o PDF de **registro / patente / Indecopi** con datos personales (DNI, domicilios, firmas).
-- **Evidencias de pruebas** con capturas que muestren datos reales de pacientes o de la clínica.
-
-**Recomendación práctica:**
-
-1. Mantén la carpeta **`Docs/`** solo en tu disco, en un **Drive privado** o en un repo **privado** aparte si tu institución lo permite.
-2. Este proyecto incluye un **`.gitignore` en la raíz** que ignora la carpeta **`Docs/`** y los **`.docx`** generados en la raíz, para que no se suban por accidente al hacer `git add .`
-3. Si alguna vez metiste `Docs/` en Git antes de ignorarla, quítala del índice sin borrarla en disco:  
-   `git rm -r --cached Docs`
-
-El **código** (`backend/`, `frontend/`) y un **README** genérico sí suelen publicarse; los **datos personales, legales y clínicos** no.
-
-## Requisitos previos
-
-- [PHP](https://www.php.net/) **8.2 o superior** con extensiones habituales de Laravel (`openssl`, `pdo`, `mbstring`, `tokenizer`, `xml`, `ctype`, `json`, `fileinfo`)
-- [Composer](https://getcomposer.org/)
-- [Node.js](https://nodejs.org/) (LTS recomendado) y npm
-- Cuenta y **clave de API** de [Google AI Studio / Gemini](https://aistudio.google.com/) para el análisis de imágenes
-
-## Instalación y configuración
-
-### 1. Clonar el repositorio
-
-```bash
-git clone https://github.com/TU_USUARIO/TU_REPO.git
-cd TU_REPO
-```
-
-### 2. Backend (Laravel)
-
-```bash
-cd backend
-composer install
-copy .env.example .env   # Windows: copy | Linux/macOS: cp
-php artisan key:generate
-```
-
-Configure la base de datos en `.env`. El ejemplo usa SQLite; si usa la ruta por defecto de Laravel:
+1. Instala [XAMPP](https://www.apachefriends.org/) con **PHP 8.2 o superior** (comprueba la versión en el panel; Laravel 12 lo requiere).
+2. Abre **XAMPP Control Panel** y arranca **MySQL** (y **Apache** solo si lo usarás para servir el `public` de Laravel; ver abajo).
+3. En **phpMyAdmin** (`http://localhost/phpmyadmin`): crea una base de datos, por ejemplo `optica_db`.
+4. Añade **Composer** al PATH o ejecútalo desde su instalación; en la carpeta `backend` ejecuta `composer install`.
+5. Copia `backend/.env.example` a `backend/.env`, genera clave: `php artisan key:generate`.
+6. En `backend/.env`, configura MySQL (ejemplo típico con XAMPP):
 
 ```env
-DB_CONNECTION=sqlite
-# Deje DB_DATABASE vacío o apunte database/database.sqlite
-```
+DB_CONNECTION=mysql
+DB_HOST=127.0.0.1
+DB_PORT=3306
+DB_DATABASE=optica_db
+DB_USERNAME=root
+DB_PASSWORD=
 
-Cree el archivo de base de datos si hace falta:
-
-```bash
-# Ejemplo SQLite
-type NUL > database\database.sqlite   # Windows PowerShell/CMD; o New-Item en PowerShell
-php artisan migrate
-```
-
-Añada la clave de Gemini:
-
-```env
 GEMINI_API_KEY=tu_clave_aqui
 ```
 
-Enlace el almacenamiento público para las imágenes de retina:
+7. Migraciones y enlace de storage:
 
 ```bash
+cd backend
+php artisan migrate
 php artisan storage:link
 ```
 
-Levante el servidor de desarrollo:
+**Forma más simple de levantar la API (recomendada):** no hace falta Apache para Laravel si usas el servidor integrado:
 
 ```bash
+cd backend
 php artisan serve
 ```
 
-Por defecto la API queda en `http://127.0.0.1:8000`.
+La API quedará en `http://127.0.0.1:8000`. Sigues usando **MySQL de XAMPP** solo como motor de base de datos.
 
-### 3. Frontend (React + Vite)
+**Alternativa con Apache:** configura un **Virtual Host** apuntando el `DocumentRoot` a `...\optica_project\backend\public` y ajusta `APP_URL` en `.env` a esa URL. Requiere `mod_rewrite` habilitado.
 
-En otra terminal:
+El **frontend** (React) se ejecuta aparte con Node:
 
 ```bash
 cd frontend
@@ -118,11 +79,46 @@ npm install
 npm run dev
 ```
 
-Ajuste la URL de la API si no usa el puerto por defecto. En `frontend/src/api/axios.js` la `baseURL` debe apuntar al backend, por ejemplo:
+En `frontend/src/api/axios.js` deja `baseURL` al mismo host donde corre Laravel (p. ej. `http://127.0.0.1:8000/api/`).
 
-```js
-baseURL: 'http://127.0.0.1:8000/api/'
+## Requisitos previos
+
+- **XAMPP** (o PHP 8.2+ + MySQL por separado)
+- [Composer](https://getcomposer.org/)
+- [Node.js](https://nodejs.org/) (LTS) y npm
+- Cuenta y **clave de API** de [Google AI Studio / Gemini](https://aistudio.google.com/)
+
+## Instalación rápida (resumen)
+
+```bash
+git clone https://github.com/nebu10524/optica_project.git
+cd optica_project/backend
+composer install
+copy .env.example .env
+php artisan key:generate
+# Editar .env: DB_* y GEMINI_API_KEY
+php artisan migrate
+php artisan storage:link
+php artisan serve
 ```
+
+En otra terminal:
+
+```bash
+cd optica_project/frontend
+npm install
+npm run dev
+```
+
+### Base SQLite (sin MySQL)
+
+Si prefieres probar sin XAMPP/MySQL, en `.env` puedes usar SQLite:
+
+```env
+DB_CONNECTION=sqlite
+```
+
+Crea `backend/database/database.sqlite` (archivo vacío) y ejecuta `php artisan migrate`.
 
 ## Scripts útiles
 
@@ -130,16 +126,15 @@ baseURL: 'http://127.0.0.1:8000/api/'
 |-----------|---------|-------------|
 | `frontend/` | `npm run dev` | Servidor de desarrollo Vite |
 | `frontend/` | `npm run build` | Compilación para producción |
-| `frontend/` | `npm run preview` | Vista previa del build |
-| `backend/` | `php artisan serve` | Servidor de desarrollo Laravel |
-| `backend/` | `php artisan migrate` | Ejecutar migraciones |
-| `backend/` | `php artisan test` | Pruebas PHPUnit (si las hubiera) |
+| `backend/` | `php artisan serve` | API Laravel |
+| `backend/` | `php artisan migrate` | Migraciones |
+| `backend/` | `php artisan test` | Pruebas PHPUnit |
 
 ## Seguridad
 
-- **No suba** el archivo `.env` ni claves (`GEMINI_API_KEY`) al repositorio.
-- Compruebe que `.gitignore` ignore `backend/.env`, `frontend/node_modules/`, `backend/vendor/` y la carpeta **`Docs/`** (este repo ya lo hace en la raíz).
-- En producción use HTTPS, variables de entorno seguras y políticas CORS acotadas.
+- **No suba** `backend/.env` ni archivos `*.env.txt` con claves; el `.gitignore` los excluye.
+- La **clave de Gemini** solo en `.env` local (y en variables de entorno en servidor si despliegas).
+- Aunque el repo sea **privado**, no invites a colaboradores de forma casual si `Docs/` contiene datos sensibles.
 
 ## Autores
 
@@ -149,13 +144,9 @@ baseURL: 'http://127.0.0.1:8000/api/'
 
 **Contexto:** proyecto vinculado a **Multiopticas** (Huancayo, Perú).
 
-## Documentación técnica generada con scripts (opcional)
-
-Si en la raíz tienes scripts Python que generan archivos Word (por ejemplo para archivo académico), puedes ejecutarlos **en local**; las salidas `.docx` en la raíz están pensadas para **no versionarse** en Git (véase `.gitignore`). Requiere `pip install python-docx`.
-
 ## Licencia
 
-Defina la licencia del código (por ejemplo MIT, propietaria o la que acuerde el equipo y la empresa titular). Mientras no se indique lo contrario, el contenido de este repositorio es material académico/profesional del equipo citado.
+Defina la licencia del código (por ejemplo MIT, propietaria o la que acuerde el equipo y la empresa titular).
 
 ---
 
