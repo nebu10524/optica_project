@@ -32,6 +32,20 @@ optica_project/
 
 Este repositorio es **privado**: `Docs/` puede estar en Git para tu respaldo. Si algún día el repo fuera **público**, convendría no incluir documentos con datos personales o legales sensibles.
 
+## Qué incluye Git (y qué instalar después de clonar)
+
+El repo lleva **todo el código** del backend y del frontend: rutas, controladores, modelos, vistas Blade/PDF, componentes React, tests, migraciones y `Docs/`.
+
+**No se suben** (por tamaño y buenas prácticas):
+
+- `backend/vendor/` → en tu PC ejecuta `composer install` dentro de `backend/`.
+- `frontend/node_modules/` → ejecuta `npm install` dentro de `frontend/`.
+- `backend/.env` → no va a Git. Copia `backend/.env.example` a `.env`, pon `APP_KEY` (`php artisan key:generate`) y tu `GEMINI_API_KEY`.
+
+Así el repositorio sigue ligero y cualquier clon queda listo tras esos tres pasos.
+
+**Base de datos:** el proyecto incluye migraciones para `usuarios`, `pacientes`, `evaluaciones_retina`, `imagenes_retina` e `historial_retina`. En una base **nueva**, `php artisan migrate` crea el esquema. Si ya tenías tablas creadas a mano y falla una migración, respalda los datos y valora `php artisan migrate:fresh` (borra todas las tablas del proyecto).
+
 ## XAMPP (desarrollo en Windows)
 
 1. Instala [XAMPP](https://www.apachefriends.org/) con **PHP 8.2 o superior** (comprueba la versión en el panel; Laravel 12 lo requiere).
