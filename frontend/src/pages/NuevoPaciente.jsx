@@ -19,7 +19,7 @@ export default function NuevoPaciente() {
     setError('')
     setLoading(true)
     try {
-      await api.post('/pacientes', form)
+      await api.post('pacientes', form)
       setExito(true)
       setTimeout(() => navigate('/pacientes'), 1600)
     } catch (err) {

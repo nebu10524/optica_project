@@ -20,7 +20,7 @@ export default function Dashboard() {
   ]
 
   useEffect(() => {
-    api.get('/pacientes').then(res => setTotalPacientes(res.data.length))
+    api.get('pacientes').then(res => setTotalPacientes(res.data.length))
     setTimeout(() => setVisible(true), 80)
   }, [])
 

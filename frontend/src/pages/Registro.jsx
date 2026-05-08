@@ -38,7 +38,7 @@ export default function Registro() {
     setError('')
     setLoading(true)
     try {
-      await api.post('/usuarios/registro', {
+      await api.post('usuarios/registro', {
         nombre:   form.nombre.trim(),
         apellido: form.apellido.trim(),
         email:    form.email.trim(),

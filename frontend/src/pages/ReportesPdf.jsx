@@ -8,7 +8,7 @@ export default function ReportesPdf() {
   const navigate = useNavigate()
 
   useEffect(() => {
-    api.get('/pacientes').then((res) => setPacientes(res.data || []))
+    api.get('pacientes').then((res) => setPacientes(res.data || []))
   }, [])
 
   const pacientesFiltrados = useMemo(() => {

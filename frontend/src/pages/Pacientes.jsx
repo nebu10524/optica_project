@@ -8,7 +8,7 @@ export default function Pacientes() {
   const [visible,  setVisible]    = useState(false)
 
   useEffect(() => {
-    api.get('/pacientes').then(res => setPacientes(res.data))
+    api.get('pacientes').then(res => setPacientes(res.data))
     setTimeout(() => setVisible(true), 80)
   }, [])
 

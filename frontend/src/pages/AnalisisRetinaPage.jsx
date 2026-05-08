@@ -13,7 +13,7 @@ export default function AnalisisRetinaPage() {
   const pacienteIdUrl = searchParams.get('paciente_id')
 
   useEffect(() => {
-    api.get('/pacientes').then(res => {
+    api.get('pacientes').then(res => {
       setPacientes(res.data)
 
       if (pacienteIdUrl) {
