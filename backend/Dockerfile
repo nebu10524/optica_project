@@ -26,10 +26,14 @@ RUN composer install --no-dev --optimize-autoloader --no-interaction --no-progre
 
 # Prepare runtime directories
 RUN mkdir -p storage/framework/{cache,sessions,views} storage/logs bootstrap/cache \
-    && chmod -R 775 storage bootstrap/cache
+    && mkdir -p /tmp/php \
+    && chmod -R 775 storage bootstrap/cache /tmp/php
 
 COPY entrypoint.sh /entrypoint.sh
 RUN chmod +x /entrypoint.sh
+
+# PHP runtime overrides for uploads and execution limits
+COPY php.ini /usr/local/etc/php/conf.d/99-custom.ini
 
 EXPOSE 10000
 
