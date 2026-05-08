@@ -60,9 +60,7 @@ export default function AnalisisRetina({ pacienteId, nombrePaciente }) {
       formData.append('paciente_id', pacienteId)
 
       // ✅ Sin slash al inicio para evitar redirect 405
-      const res = await api.post('retina/analizar', formData, {
-        headers: { 'Content-Type': 'multipart/form-data' }
-      })
+      const res = await api.post('retina/analizar', formData)
 
       setReporte(res.data.reporte)
       setImagenUrl(res.data.imagen_url)
