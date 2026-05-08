@@ -14,12 +14,11 @@ RUN apt-get update && apt-get install -y \
 # Install Composer
 COPY --from=composer:2 /usr/bin/composer /usr/bin/composer
 
-# Install PHP dependencies first for Docker layer caching
-COPY composer.json composer.lock ./
-RUN composer install --no-dev --optimize-autoloader --no-interaction --no-progress
-
-# Copy project files
+# Copy full project before composer install because Laravel scripts
+# may call artisan during install (which requires full source tree).
 COPY . .
+
+RUN composer install --no-dev --optimize-autoloader --no-interaction --no-progress
 
 # Prepare runtime directories
 RUN mkdir -p storage/framework/{cache,sessions,views} storage/logs bootstrap/cache \
