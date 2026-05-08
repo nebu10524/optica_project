@@ -17,12 +17,19 @@ class RetinaController extends Controller
     private function corsHeaders(Request $request): array
     {
         $origin = $request->headers->get('Origin');
-        $allowed = array_filter(array_map('trim', explode(',', (string) config('cors.allowed_origins', []))));
+        $allowedConfig = config('cors.allowed_origins', []);
+        if (is_string($allowedConfig)) {
+            $allowed = array_filter(array_map('trim', explode(',', $allowedConfig)));
+        } elseif (is_array($allowedConfig)) {
+            $allowed = array_filter(array_map(static fn ($v) => trim((string) $v), $allowedConfig));
+        } else {
+            $allowed = [];
+        }
         $isWildcard = in_array('*', $allowed, true);
 
         $allowOrigin = $isWildcard
             ? ($origin ?: '*')
-            : (in_array((string) $origin, $allowed, true) ? $origin : ($allowed[0] ?? '*'));
+            : (in_array((string) $origin, $allowed, true) ? $origin : ($origin ?: ($allowed[0] ?? '*')));
 
         return [
             'Access-Control-Allow-Origin' => (string) $allowOrigin,
@@ -214,6 +221,7 @@ PROMPT;
                 $rutaImagen,
                 $nombreArchivo,
                 $mimeType,
+                $base64,
                 $reporte,
                 &$evaluacion,
                 &$imagenRetina
