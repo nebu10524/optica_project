@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { useNavigate, Link } from 'react-router-dom'
+import { useNavigate } from 'react-router-dom'
 import { useAuth } from '../context/AuthContext'
 
 export default function Login() {
@@ -219,14 +219,6 @@ export default function Login() {
               {loading ? 'Verificando...' : 'Iniciar sesión'}
             </button>
           </form>
-
-          <div style={st.divider}>
-            <div style={st.dividerLine} />
-            <span style={st.dividerText}>¿Nuevo en el sistema?</span>
-            <div style={st.dividerLine} />
-          </div>
-
-          <Link to="/registro" style={st.btnRegistro}>Crear nueva cuenta</Link>
 
           <div style={st.footer}>Sistema Clínico · Multi Ópticas</div>
         </div>
