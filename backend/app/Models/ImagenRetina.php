@@ -14,6 +14,7 @@ class ImagenRetina extends Model
         'ruta_imagen',
         'nombre_archivo',
         'mime_type',
+        'imagen_base64',
         'clasificacion',
         'nivel_confianza',
         'urgencia',

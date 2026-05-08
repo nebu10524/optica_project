@@ -44,6 +44,8 @@
     if ($imagenUrl && file_exists($imagenUrl)) {
         $mime = $imagen?->mime_type ?: 'image/jpeg';
         $imagenBase64 = 'data:' . $mime . ';base64,' . base64_encode(file_get_contents($imagenUrl));
+    } elseif (!empty($imagenDataUri)) {
+        $imagenBase64 = $imagenDataUri;
     }
 
     $logoSvg = <<<SVG

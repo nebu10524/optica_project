@@ -39,14 +39,20 @@ class HistorialController extends Controller
             ->findOrFail($historial_id);
 
         $imagenUrl = null;
+        $imagenDataUri = null;
         $ruta = $registro->imagen?->ruta_imagen;
         if ($ruta && Storage::disk('public')->exists($ruta)) {
             $imagenUrl = Storage::disk('public')->path($ruta);
+        }
+        if (!$imagenUrl && !empty($registro->imagen?->imagen_base64)) {
+            $mime = $registro->imagen?->mime_type ?: 'image/jpeg';
+            $imagenDataUri = 'data:' . $mime . ';base64,' . $registro->imagen->imagen_base64;
         }
 
         $pdf = Pdf::loadView('pdf.resultado_retina', [
             'registro' => $registro,
             'imagenUrl' => $imagenUrl,
+            'imagenDataUri' => $imagenDataUri,
             'generadoEn' => now(),
         ])->setPaper('a4');
 
@@ -89,9 +95,23 @@ class HistorialController extends Controller
         $ruta = $registro->imagen?->ruta_imagen;
 
         if (!$ruta || !Storage::disk('public')->exists($ruta)) {
-            return response()->json([
-                'message' => 'No se encontro imagen asociada para este analisis.'
-            ], 404);
+            $base64 = $registro->imagen?->imagen_base64;
+            if (empty($base64)) {
+                return response()->json([
+                    'message' => 'No se encontro imagen asociada para este analisis.'
+                ], 404);
+            }
+            $mime = $registro->imagen?->mime_type ?: 'image/jpeg';
+            $contenido = base64_decode($base64, true);
+            if ($contenido === false) {
+                return response()->json([
+                    'message' => 'No se pudo reconstruir la imagen almacenada.'
+                ], 500);
+            }
+
+            return response($contenido, 200)
+                ->header('Content-Type', $mime)
+                ->header('Cache-Control', 'no-store, no-cache, must-revalidate, max-age=0');
         }
 
         $mime = $registro->imagen?->mime_type ?: (Storage::disk('public')->mimeType($ruta) ?: 'image/jpeg');

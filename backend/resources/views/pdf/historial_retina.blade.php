@@ -149,6 +149,9 @@
             if ($ruta && file_exists($ruta)) {
                 $mime = $imagen?->mime_type ?: 'image/jpeg';
                 $imagenBase64 = 'data:' . $mime . ';base64,' . base64_encode(file_get_contents($ruta));
+            } elseif (!empty($imagen?->imagen_base64)) {
+                $mime = $imagen?->mime_type ?: 'image/jpeg';
+                $imagenBase64 = 'data:' . $mime . ';base64,' . $imagen->imagen_base64;
             }
             $hallazgos = is_array($imagen?->hallazgos) ? $imagen->hallazgos : (json_decode($imagen?->hallazgos ?? '[]', true) ?: []);
             $signosRd = is_array($imagen?->signos_rd) ? $imagen->signos_rd : (json_decode($imagen?->signos_rd ?? '[]', true) ?: []);

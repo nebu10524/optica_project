@@ -212,6 +212,9 @@ PROMPT;
                     'ruta_imagen'     => $rutaImagen,
                     'nombre_archivo'  => $nombreArchivo,
                     'mime_type'       => $mimeType,
+                    // Persistimos la imagen en DB para que el PDF siga mostrando
+                    // la evidencia incluso si el disco efimero de Render se limpia.
+                    'imagen_base64'   => $base64,
                     'clasificacion'   => $reporte['clasificacion'],
                     'nivel_confianza' => $reporte['nivel_confianza'],
                     'urgencia'        => $reporte['urgencia'],
