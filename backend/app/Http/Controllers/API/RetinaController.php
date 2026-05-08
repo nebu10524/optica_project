@@ -14,8 +14,28 @@ use Illuminate\Support\Str;
 
 class RetinaController extends Controller
 {
+    private function corsHeaders(Request $request): array
+    {
+        $origin = $request->headers->get('Origin');
+        $allowed = array_filter(array_map('trim', explode(',', (string) config('cors.allowed_origins', []))));
+        $isWildcard = in_array('*', $allowed, true);
+
+        $allowOrigin = $isWildcard
+            ? ($origin ?: '*')
+            : (in_array((string) $origin, $allowed, true) ? $origin : ($allowed[0] ?? '*'));
+
+        return [
+            'Access-Control-Allow-Origin' => (string) $allowOrigin,
+            'Access-Control-Allow-Methods' => 'GET, POST, PUT, DELETE, OPTIONS',
+            'Access-Control-Allow-Headers' => 'Content-Type, Authorization, X-Requested-With',
+            'Vary' => 'Origin',
+        ];
+    }
+
     public function analizar(Request $request)
     {
+        $cors = $this->corsHeaders($request);
+
         $request->validate([
             'imagen'      => 'required|image|mimes:jpg,jpeg,png|max:5120',
             'paciente_id' => 'required|integer|exists:pacientes,id',
@@ -134,7 +154,7 @@ PROMPT;
                 'error'   => 'Error al conectar con Gemini',
                 'status'  => $response->status(),
                 'detalle' => $response->json()
-            ], 500)->header('Access-Control-Allow-Origin', '*');
+            ], 500, $cors);
         }
 
         $texto = $response->json('candidates.0.content.parts.0.text', '');
@@ -176,7 +196,7 @@ PROMPT;
         if (!$usuarioId) {
             return response()->json([
                 'message' => 'Usuario no autenticado.'
-            ], 401);
+            ], 401, $cors);
         }
 
         $nombreArchivo = Str::uuid() . '.' . $archivo->getClientOriginalExtension();
@@ -246,7 +266,7 @@ PROMPT;
 
             return response()->json([
                 'message' => 'No se pudo guardar el analisis.'
-            ], 500);
+            ], 500, $cors);
         }
 
         return response()->json([
@@ -256,6 +276,6 @@ PROMPT;
             'paciente_id'   => $request->paciente_id,
             'evaluacion_id' => $evaluacion->id,
             'imagen_id'     => $imagenRetina->id,
-        ])->header('Access-Control-Allow-Origin', '*');
+        ], 200, $cors);
     }
 }
