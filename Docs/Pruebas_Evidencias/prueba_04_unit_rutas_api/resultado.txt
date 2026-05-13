@@ -1,7 +1,0 @@
-Prueba: Unitarias de mapa de rutas API
-Archivo real ejecutado: backend/tests/Unit/ApiRouteMapTest.php
-Comando: php artisan test
-Resultado: PASSED
-Checks validados:
-- existe ruta POST /api/login
-- existe ruta DELETE /api/historial/{historial_id}

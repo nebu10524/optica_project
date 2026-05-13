@@ -1,8 +1,0 @@
-Prueba: Validaciones de login
-Archivo real ejecutado: backend/tests/Feature/ApiAuthValidationTest.php
-Comando: php artisan test
-Resultado: PASSED
-Checks validados:
-- email requerido
-- password requerido
-- formato de email valido

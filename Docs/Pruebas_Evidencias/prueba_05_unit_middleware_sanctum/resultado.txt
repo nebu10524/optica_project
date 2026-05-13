@@ -1,7 +1,0 @@
-Prueba: Unitarias de seguridad de middleware
-Archivo real ejecutado: backend/tests/Unit/ApiSecurityMiddlewareTest.php
-Comando: php artisan test
-Resultado: PASSED
-Checks validados:
-- /api/pacientes incluye middleware auth:sanctum
-- /api/me incluye middleware auth:sanctum

@@ -1,8 +1,0 @@
-Prueba: Rutas protegidas por Sanctum
-Archivo real ejecutado: backend/tests/Feature/ApiProtectedRoutesTest.php
-Comando: php artisan test
-Resultado: PASSED
-Checks validados:
-- /api/me responde 401 sin token
-- /api/pacientes responde 401 sin token
-- /api/historial/{id} responde 401 sin token

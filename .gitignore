@@ -1,5 +1,5 @@
-# Documentación del proyecto (PDF, patentes, pruebas). Repo privado: se versiona.
-# Si el repo pasara a ser público, valorar quitar Docs/ del historial o moverla a otro sitio.
+# Documentación local (PDF, patentes, pruebas, informes): no se sube al remoto.
+Docs/
 
 # Salidas locales de plantillas Word en la raíz (genéricas)
 Documento_*.docx
