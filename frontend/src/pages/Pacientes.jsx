@@ -52,7 +52,7 @@ export default function Pacientes() {
           <div style={s.pageTag}>Gestión</div>
           <h2 style={s.pageTitle}>Pacientes</h2>
           <p style={s.pageSub}>
-            {pacientes.length} paciente{pacientes.length !== 1 ? 's' : ''} registrado{pacientes.length !== 1 ? 's' : ''}
+            {`${pacientes.length} paciente${pacientes.length === 1 ? '' : 's'} registrado${pacientes.length === 1 ? '' : 's'}`}
           </p>
         </div>
         <Link to="/pacientes/nuevo" style={s.btnNuevo} className="btn-action">
@@ -94,7 +94,7 @@ export default function Pacientes() {
         </div>
         {busqueda && (
           <div style={{ fontSize: 12, color: '#94a3b8', marginTop: 8 }}>
-            {filtrados.length} resultado{filtrados.length !== 1 ? 's' : ''} para "{busqueda}"
+            {`${filtrados.length} resultado${filtrados.length === 1 ? '' : 's'} para "${busqueda}"`}
           </div>
         )}
       </div>

@@ -160,13 +160,14 @@ export default function Login() {
 
           <form onSubmit={handleSubmit}>
             <div style={st.group}>
-              <label style={st.label}>Correo electrónico</label>
+              <label htmlFor="login-email" style={st.label}>Correo electrónico</label>
               <div style={{ position: 'relative' }}>
                 <svg style={st.inputIcon} width="16" height="16" viewBox="0 0 16 16" fill="none">
                   <rect x="1.5" y="3.5" width="13" height="9" rx="1.5" stroke="#94a3b8" strokeWidth="1.2" />
                   <path d="M2 4.5l6 4 6-4" stroke="#94a3b8" strokeWidth="1.2" strokeLinecap="round" />
                 </svg>
                 <input
+                  id="login-email"
                   className="login-input"
                   type="email"
                   value={email}
@@ -178,7 +179,7 @@ export default function Login() {
             </div>
 
             <div style={st.group}>
-              <label style={st.label}>Contraseña</label>
+              <label htmlFor="login-password" style={st.label}>Contraseña</label>
               <div style={{ position: 'relative' }}>
                 <svg style={st.inputIcon} width="16" height="16" viewBox="0 0 16 16" fill="none">
                   <rect x="3" y="7" width="10" height="7" rx="1.5" stroke="#94a3b8" strokeWidth="1.2" />
@@ -186,6 +187,7 @@ export default function Login() {
                   <circle cx="8" cy="10.5" r="1" fill="#94a3b8" />
                 </svg>
                 <input
+                  id="login-password"
                   className="login-input"
                   type={showPass ? 'text' : 'password'}
                   value={password}

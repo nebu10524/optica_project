@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react'
+import PropTypes from 'prop-types'
 import uronImg from '../assets/uron.png'
 
 const mensajes = {
@@ -22,26 +23,22 @@ export default function AsistenteUron({ modo = 'login' }) {
   const [idxMsg, setIdxMsg]   = useState(0)
   const [visible, setVisible] = useState(true)
   const [cerrado, setCerrado] = useState(false)
-  const [hovered, setHovered] = useState(false)
 
-  useEffect(() => {
-    const id = setInterval(() => {
-      setVisible(false)
-      setTimeout(() => {
-        setIdxMsg(i => (i + 1) % mensajes[modo].length)
-        setVisible(true)
-      }, 350)
-    }, 5000)
-    return () => clearInterval(id)
-  }, [modo])
-
-  const handleClick = () => {
+  const cambiarMensaje = (retardo) => {
     setVisible(false)
     setTimeout(() => {
       setIdxMsg(i => (i + 1) % mensajes[modo].length)
       setVisible(true)
-    }, 300)
+    }, retardo)
   }
+
+  useEffect(() => {
+    const id = setInterval(() => cambiarMensaje(350), 5000)
+    return () => clearInterval(id)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [modo])
+
+  const handleClick = () => cambiarMensaje(300)
 
   if (cerrado) return null
 
@@ -218,10 +215,18 @@ export default function AsistenteUron({ modo = 'login' }) {
 
         {/* Hurón con círculo animado */}
         <div
+          role="button"
+          tabIndex={0}
           className="uron-wrapper"
           onClick={handleClick}
+          onKeyDown={(event) => {
+            if (event.key === 'Enter' || event.key === ' ') {
+              event.preventDefault()
+              handleClick()
+            }
+          }}
           title="¡Haz clic en mí!"
-          style={{ position: 'relative' }}
+          style={{ position: 'relative', border: 0, padding: 0, background: 'transparent', cursor: 'pointer' }}
         >
           <div className="uron-circle">
             <img
@@ -239,4 +244,8 @@ export default function AsistenteUron({ modo = 'login' }) {
       </div>
     </>
   )
+}
+
+AsistenteUron.propTypes = {
+  modo: PropTypes.oneOf(['login', 'registro']),
 }

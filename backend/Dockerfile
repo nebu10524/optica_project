@@ -22,10 +22,9 @@ COPY --from=composer:2 /usr/bin/composer /usr/bin/composer
 # may call artisan during install (which requires full source tree).
 COPY . .
 
-RUN composer install --no-dev --optimize-autoloader --no-interaction --no-progress
-
 # Prepare runtime directories
-RUN mkdir -p storage/framework/{cache,sessions,views} storage/logs bootstrap/cache \
+RUN composer install --no-dev --optimize-autoloader --no-interaction --no-progress \
+    && mkdir -p storage/framework/{cache,sessions,views} storage/logs bootstrap/cache \
     && mkdir -p /tmp/php \
     && chmod -R 775 storage bootstrap/cache /tmp/php
 

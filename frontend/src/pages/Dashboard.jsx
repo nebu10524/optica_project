@@ -1,8 +1,69 @@
 import { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
+import PropTypes from 'prop-types'
 import { useAuth } from '../context/AuthContext'
 import api from '../api/axios'
 import uronImg from '../assets/uron.png'
+
+const mensajesUron = [
+  'Ve directo a pacientes, historial o analisis de retina desde aqui.',
+  'Cada evaluacion a tiempo puede marcar una gran diferencia visual.',
+  'Hoy puedes avanzar revisando pacientes pendientes y su seguimiento.',
+  'Un control ordenado mejora la atencion y la confianza del paciente.',
+]
+
+function obtenerSaludo(hora) {
+  if (hora < 12) return 'Buenos días'
+  if (hora < 18) return 'Buenas tardes'
+  return 'Buenas noches'
+}
+
+function rotarMensaje(setMsgIndex, setShowMsg) {
+  setShowMsg(false)
+  setTimeout(() => {
+    setMsgIndex(prev => (prev + 1) % mensajesUron.length)
+    setShowMsg(true)
+  }, 1400)
+}
+
+function DashboardCard({ delay, visible, onClick, icon, chip, eyebrow, titulo, descripcion, hoverNote }) {
+  return (
+    <button
+      type="button"
+      className="card-hover card-interactive"
+      style={{
+        ...s.card,
+        opacity: visible ? 1 : 0,
+        transform: visible ? 'translateY(0)' : 'translateY(22px)',
+        transition: `opacity 0.5s ease ${delay}s, transform 0.5s ease ${delay}s`,
+      }}
+      onClick={onClick}
+    >
+      <div style={s.accentBar} />
+      <div style={s.cardHead}>
+        <div style={s.iconBox}>{icon}</div>
+        <span style={s.chip}>{chip}</span>
+      </div>
+      {eyebrow}
+      <div className="card-title-main" style={s.cardTitle}>{titulo}</div>
+      <div style={s.cardDesc}>{descripcion}</div>
+      <div style={s.divider} />
+      <div className="card-hover-note" style={s.hoverNote}>{hoverNote}</div>
+    </button>
+  )
+}
+
+DashboardCard.propTypes = {
+  delay: PropTypes.number,
+  visible: PropTypes.bool,
+  onClick: PropTypes.func.isRequired,
+  icon: PropTypes.node,
+  chip: PropTypes.node,
+  eyebrow: PropTypes.node,
+  titulo: PropTypes.node,
+  descripcion: PropTypes.node,
+  hoverNote: PropTypes.node,
+}
 
 export default function Dashboard() {
   const [totalPacientes, setTotalPacientes] = useState(0)
@@ -12,37 +73,25 @@ export default function Dashboard() {
   const { usuario } = useAuth()
   const navigate = useNavigate()
 
-  const mensajesUron = [
-    'Ve directo a pacientes, historial o analisis de retina desde aqui.',
-    'Cada evaluacion a tiempo puede marcar una gran diferencia visual.',
-    'Hoy puedes avanzar revisando pacientes pendientes y su seguimiento.',
-    'Un control ordenado mejora la atencion y la confianza del paciente.',
-  ]
-
   useEffect(() => {
     api.get('pacientes').then(res => setTotalPacientes(res.data.length))
     setTimeout(() => setVisible(true), 80)
   }, [])
 
   useEffect(() => {
-    const id = setInterval(() => {
-      setShowMsg(false)
-      setTimeout(() => {
-        setMsgIndex(prev => (prev + 1) % mensajesUron.length)
-        setShowMsg(true)
-      }, 1400)
-    }, 8000)
+    const id = setInterval(() => rotarMensaje(setMsgIndex, setShowMsg), 8000)
     return () => clearInterval(id)
   }, [])
 
   const now = new Date()
-  const hora = now.getHours()
-  const saludo = hora < 12 ? 'Buenos días' : hora < 18 ? 'Buenas tardes' : 'Buenas noches'
+  const saludo = obtenerSaludo(now.getHours())
   const nombreUsuario = usuario?.nombre || 'Doctor'
 
   const fechaFormateada = now.toLocaleDateString('es-PE', {
     weekday: 'long', year: 'numeric', month: 'long', day: 'numeric'
   })
+
+  const subtitulo = `${fechaFormateada.charAt(0).toUpperCase()}${fechaFormateada.slice(1)} · Aquí tienes el resumen del sistema.`
 
   return (
     <div style={s.page}>
@@ -110,12 +159,11 @@ export default function Dashboard() {
           <div style={{ flex: 1 }}>
             <div style={s.welcomeTag}>Dashboard principal</div>
             <h1 style={s.welcomeTitle}>
-              {saludo},{' '}
-              <span style={{ color: '#0696D7' }}>{nombreUsuario}</span> 👋
+              {`${saludo}, `}
+              <span style={{ color: '#0696D7' }}>{nombreUsuario}</span>
+              {' 👋'}
             </h1>
-            <p style={s.welcomeSub}>
-              {fechaFormateada.charAt(0).toUpperCase() + fechaFormateada.slice(1)} · Aquí tienes el resumen del sistema.
-            </p>
+            <p style={s.welcomeSub}>{subtitulo}</p>
             <div style={s.systemPill}>
               <span style={s.systemDot} />
               Sistema activo
@@ -143,118 +191,94 @@ export default function Dashboard() {
         {/* ── Cards ── */}
         <div style={s.grid}>
 
-          {/* Pacientes */}
-          <div className="card-hover card-interactive" style={{
-            ...s.card,
-            opacity: visible ? 1 : 0,
-            transform: visible ? 'translateY(0)' : 'translateY(22px)',
-            transition: 'opacity 0.5s ease 0.15s, transform 0.5s ease 0.15s',
-          }} onClick={() => navigate('/pacientes')} role="button">
-            <div style={s.accentBar} />
-            <div style={s.cardHead}>
-              <div style={s.iconBox}>
-                <svg width="26" height="26" viewBox="0 0 26 26" fill="none">
-                  <circle cx="13" cy="9" r="4.5" stroke="#2563eb" strokeWidth="1.8" />
-                  <path d="M4 23c0-4.97 4.03-9 9-9s9 4.03 9 9" stroke="#2563eb" strokeWidth="1.8" strokeLinecap="round" />
-                </svg>
+          <DashboardCard
+            delay={0.15}
+            visible={visible}
+            onClick={() => navigate('/pacientes')}
+            icon={(
+              <svg width="26" height="26" viewBox="0 0 26 26" fill="none">
+                <circle cx="13" cy="9" r="4.5" stroke="#2563eb" strokeWidth="1.8" />
+                <path d="M4 23c0-4.97 4.03-9 9-9s9 4.03 9 9" stroke="#2563eb" strokeWidth="1.8" strokeLinecap="round" />
+              </svg>
+            )}
+            chip="Total"
+            eyebrow={(
+              <div style={{ fontSize: 46, fontWeight: 800, color: '#0696D7', lineHeight: 1, marginBottom: 6 }}>
+                {totalPacientes}
               </div>
-              <span style={s.chip}>Total</span>
-            </div>
-            <div style={{ fontSize: 46, fontWeight: 800, color: '#0696D7', lineHeight: 1, marginBottom: 6 }}>
-              {totalPacientes}
-            </div>
-            <div className="card-title-main" style={s.cardTitle}>Pacientes registrados</div>
-            <div style={s.cardDesc}>Pacientes activos en el sistema de gestión visual</div>
-            <div style={s.divider} />
-            <div className="card-hover-note" style={s.hoverNote}>Entrar al panel de pacientes</div>
-          </div>
+            )}
+            titulo="Pacientes registrados"
+            descripcion="Pacientes activos en el sistema de gestión visual"
+            hoverNote="Entrar al panel de pacientes"
+          />
 
-          {/* Historial */}
-          <div className="card-hover card-interactive" style={{
-            ...s.card,
-            opacity: visible ? 1 : 0,
-            transform: visible ? 'translateY(0)' : 'translateY(22px)',
-            transition: 'opacity 0.5s ease 0.31s, transform 0.5s ease 0.31s',
-          }} onClick={() => navigate('/pacientes')} role="button">
-            <div style={s.accentBar} />
-            <div style={s.cardHead}>
-              <div style={s.iconBox}>
-                <svg width="26" height="26" viewBox="0 0 26 26" fill="none">
-                  <rect x="4" y="2" width="18" height="22" rx="3" stroke="#2563eb" strokeWidth="1.8" />
-                  <line x1="8" y1="8"  x2="18" y2="8"  stroke="#2563eb" strokeWidth="1.5" strokeLinecap="round" />
-                  <line x1="8" y1="12" x2="18" y2="12" stroke="#2563eb" strokeWidth="1.5" strokeLinecap="round" />
-                  <line x1="8" y1="16" x2="14" y2="16" stroke="#2563eb" strokeWidth="1.5" strokeLinecap="round" />
-                </svg>
+          <DashboardCard
+            delay={0.31}
+            visible={visible}
+            onClick={() => navigate('/pacientes')}
+            icon={(
+              <svg width="26" height="26" viewBox="0 0 26 26" fill="none">
+                <rect x="4" y="2" width="18" height="22" rx="3" stroke="#2563eb" strokeWidth="1.8" />
+                <line x1="8" y1="8"  x2="18" y2="8"  stroke="#2563eb" strokeWidth="1.5" strokeLinecap="round" />
+                <line x1="8" y1="12" x2="18" y2="12" stroke="#2563eb" strokeWidth="1.5" strokeLinecap="round" />
+                <line x1="8" y1="16" x2="14" y2="16" stroke="#2563eb" strokeWidth="1.5" strokeLinecap="round" />
+              </svg>
+            )}
+            chip="Registros"
+            eyebrow={(
+              <div style={{ fontSize: 13, fontWeight: 700, color: '#0696D7', letterSpacing: '1px', textTransform: 'uppercase', marginBottom: 6 }}>
+                Historial clínico
               </div>
-              <span style={s.chip}>Registros</span>
-            </div>
-            <div style={{ fontSize: 13, fontWeight: 700, color: '#0696D7', letterSpacing: '1px', textTransform: 'uppercase', marginBottom: 6 }}>
-              Historial clínico
-            </div>
-            <div className="card-title-main" style={s.cardTitle}>Historial de pacientes</div>
-            <div style={s.cardDesc}>Consulta evaluaciones previas, resultados e interpretaciones clínicas</div>
-            <div style={s.divider} />
-            <div className="card-hover-note" style={s.hoverNote}>Revisar historial clínico</div>
-          </div>
+            )}
+            titulo="Historial de pacientes"
+            descripcion="Consulta evaluaciones previas, resultados e interpretaciones clínicas"
+            hoverNote="Revisar historial clínico"
+          />
 
-          {/* ── Análisis de Retina IA ── */}
-          <div className="card-hover card-interactive" style={{
-            ...s.card,
-            opacity: visible ? 1 : 0,
-            transform: visible ? 'translateY(0)' : 'translateY(22px)',
-            transition: 'opacity 0.5s ease 0.39s, transform 0.5s ease 0.39s',
-          }} onClick={() => navigate('/retina')} role="button">
-            <div style={s.accentBar} />
-            <div style={s.cardHead}>
-              <div style={s.iconBox}>
-                <svg width="26" height="26" viewBox="0 0 26 26" fill="none">
-                  <circle cx="13" cy="13" r="9"   stroke="#7c3aed" strokeWidth="1.8" />
-                  <circle cx="13" cy="13" r="4.5" stroke="#7c3aed" strokeWidth="1.8" />
-                  <circle cx="13" cy="13" r="1.8" fill="#7c3aed" />
-                </svg>
+          <DashboardCard
+            delay={0.39}
+            visible={visible}
+            onClick={() => navigate('/retina')}
+            icon={(
+              <svg width="26" height="26" viewBox="0 0 26 26" fill="none">
+                <circle cx="13" cy="13" r="9"   stroke="#7c3aed" strokeWidth="1.8" />
+                <circle cx="13" cy="13" r="4.5" stroke="#7c3aed" strokeWidth="1.8" />
+                <circle cx="13" cy="13" r="1.8" fill="#7c3aed" />
+              </svg>
+            )}
+            chip="IA clínica"
+            eyebrow={(
+              <div style={{ fontSize: 13, fontWeight: 700, color: '#0696D7', letterSpacing: '1px', textTransform: 'uppercase', marginBottom: 6 }}>
+                Retinografía
               </div>
-              <span style={s.chip}>IA clínica</span>
-            </div>
-            <div style={{ fontSize: 13, fontWeight: 700, color: '#0696D7', letterSpacing: '1px', textTransform: 'uppercase', marginBottom: 6 }}>
-              Retinografía
-            </div>
-            <div className="card-title-main" style={s.cardTitle}>Análisis de Retina con IA</div>
-            <div style={s.cardDesc}>
-              Detecta signos de retinopatía diabética con IA. Clasificación automática y recomendación clínica por paciente.
-            </div>
-            <div style={s.divider} />
-            <div className="card-hover-note" style={s.hoverNote}>Abrir análisis de retinografía</div>
-          </div>
+            )}
+            titulo="Análisis de Retina con IA"
+            descripcion="Detecta signos de retinopatía diabética con IA. Clasificación automática y recomendación clínica por paciente."
+            hoverNote="Abrir análisis de retinografía"
+          />
 
-          {/* ── Reportes PDF ── */}
-          <div className="card-hover card-interactive" style={{
-            ...s.card,
-            opacity: visible ? 1 : 0,
-            transform: visible ? 'translateY(0)' : 'translateY(22px)',
-            transition: 'opacity 0.5s ease 0.47s, transform 0.5s ease 0.47s',
-          }} onClick={() => navigate('/reportes-pdf')} role="button">
-            <div style={s.accentBar} />
-            <div style={s.cardHead}>
-              <div style={s.iconBox}>
-                <svg width="26" height="26" viewBox="0 0 26 26" fill="none">
-                  <path d="M7 3h9l4 4v15a1 1 0 0 1-1 1H7a1 1 0 0 1-1-1V4a1 1 0 0 1 1-1Z" stroke="#2563eb" strokeWidth="1.8"/>
-                  <path d="M16 3v4h4" stroke="#2563eb" strokeWidth="1.8"/>
-                  <line x1="9" y1="12" x2="17" y2="12" stroke="#2563eb" strokeWidth="1.6" strokeLinecap="round"/>
-                  <line x1="9" y1="16" x2="17" y2="16" stroke="#2563eb" strokeWidth="1.6" strokeLinecap="round"/>
-                </svg>
+          <DashboardCard
+            delay={0.47}
+            visible={visible}
+            onClick={() => navigate('/reportes-pdf')}
+            icon={(
+              <svg width="26" height="26" viewBox="0 0 26 26" fill="none">
+                <path d="M7 3h9l4 4v15a1 1 0 0 1-1 1H7a1 1 0 0 1-1-1V4a1 1 0 0 1 1-1Z" stroke="#2563eb" strokeWidth="1.8"/>
+                <path d="M16 3v4h4" stroke="#2563eb" strokeWidth="1.8"/>
+                <line x1="9" y1="12" x2="17" y2="12" stroke="#2563eb" strokeWidth="1.6" strokeLinecap="round"/>
+                <line x1="9" y1="16" x2="17" y2="16" stroke="#2563eb" strokeWidth="1.6" strokeLinecap="round"/>
+              </svg>
+            )}
+            chip="PDF"
+            eyebrow={(
+              <div style={{ fontSize: 13, fontWeight: 700, color: '#0696D7', letterSpacing: '1px', textTransform: 'uppercase', marginBottom: 6 }}>
+                Reportes
               </div>
-              <span style={s.chip}>PDF</span>
-            </div>
-            <div style={{ fontSize: 13, fontWeight: 700, color: '#0696D7', letterSpacing: '1px', textTransform: 'uppercase', marginBottom: 6 }}>
-              Reportes
-            </div>
-            <div className="card-title-main" style={s.cardTitle}>Descarga de informes PDF</div>
-            <div style={s.cardDesc}>
-              Genera reportes de resultados por paciente y descarga el historial completo en PDF.
-            </div>
-            <div style={s.divider} />
-            <div className="card-hover-note" style={s.hoverNote}>Abrir centro de reportes PDF</div>
-          </div>
+            )}
+            titulo="Descarga de informes PDF"
+            descripcion="Genera reportes de resultados por paciente y descarga el historial completo en PDF."
+            hoverNote="Abrir centro de reportes PDF"
+          />
 
         </div>
 
@@ -265,7 +289,7 @@ export default function Dashboard() {
           opacity: visible ? 1 : 0,
           transition: 'opacity 0.5s ease 0.45s'
         }}>
-          Multi Ópticas · Sistema de Gestión Visual · {now.getFullYear()}
+          {`Multi Ópticas · Sistema de Gestión Visual · ${now.getFullYear()}`}
         </div>
       </div>
     </div>
@@ -390,6 +414,10 @@ const s = {
     flexDirection: 'column',
     position: 'relative',
     overflow: 'hidden',
+    width: '100%',
+    textAlign: 'left',
+    font: 'inherit',
+    cursor: 'pointer',
   },
   accentBar: {
     display: 'none',
@@ -405,21 +433,10 @@ const s = {
     border: '1px solid #e2e8f0',
     display: 'flex', alignItems: 'center', justifyContent: 'center',
   },
-  iconBoxGreen: {
-    width: 44, height: 44, borderRadius: 10,
-    background: '#f0fdf4',
-    border: '1px solid #dcfce7',
-    display: 'flex', alignItems: 'center', justifyContent: 'center',
-  },
   chip: {
     fontSize: 11, fontWeight: 600,
     padding: '4px 10px', borderRadius: 20, letterSpacing: '0.3px',
     background: '#eff6ff', color: '#1d4ed8',
-  },
-  chipGreen: {
-    fontSize: 11, fontWeight: 600,
-    padding: '4px 10px', borderRadius: 20, letterSpacing: '0.3px',
-    background: '#f0fdf4', color: '#065f46',
   },
   cardTitle: { fontSize: 16, fontWeight: 700, color: '#1e293b', marginBottom: 6 },
   cardDesc:  { fontSize: 13, color: '#64748b', lineHeight: 1.6, flex: 1, marginBottom: 18 },

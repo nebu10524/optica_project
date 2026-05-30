@@ -72,9 +72,15 @@ const parseObjectSafe = (value) => {
   return null
 }
 
+const getSafeNumericId = (value) => {
+  const normalized = String(value ?? '')
+  return /^\d+$/.test(normalized) ? normalized : null
+}
+
 export default function ReportesPdfPaciente() {
   const { pacienteId } = useParams()
   const navigate = useNavigate()
+  const pacienteIdSeguro = useMemo(() => getSafeNumericId(pacienteId), [pacienteId])
 
   const [paciente, setPaciente] = useState(null)
   const [historial, setHistorial] = useState([])
@@ -85,8 +91,13 @@ export default function ReportesPdfPaciente() {
   const [imagenBlobUrl, setImagenBlobUrl] = useState(null)
 
   useEffect(() => {
+    if (!pacienteIdSeguro) {
+      setCargando(false)
+      return
+    }
+
     setCargando(true)
-    Promise.all([api.get(`/pacientes/${pacienteId}`), api.get(`/historial/${pacienteId}`)])
+    Promise.all([api.get(`/pacientes/${pacienteIdSeguro}`), api.get(`/historial/${pacienteIdSeguro}`)])
       .then(([pRes, hRes]) => {
         setPaciente(pRes.data)
         // Importante: el backend ya ordena por fecha_analisis desc.
@@ -97,7 +108,7 @@ export default function ReportesPdfPaciente() {
         setSeleccion(arr[0] || null)
       })
       .finally(() => setCargando(false))
-  }, [pacienteId])
+  }, [pacienteIdSeguro])
 
   const nombrePaciente = useMemo(() => {
     if (!paciente) return 'Paciente'
@@ -105,22 +116,24 @@ export default function ReportesPdfPaciente() {
   }, [paciente])
 
   const descargarBlob = (blob, nombre) => {
-    const url = window.URL.createObjectURL(blob)
+    const url = globalThis.URL.createObjectURL(blob)
     const a = document.createElement('a')
     a.href = url
     a.download = nombre
     document.body.appendChild(a)
     a.click()
     a.remove()
-    window.URL.revokeObjectURL(url)
+    globalThis.URL.revokeObjectURL(url)
   }
 
   const descargarHistorialPdf = async () => {
+    if (!pacienteIdSeguro) return
+
     setDescargando(true)
     setTipoDescarga('historial')
     try {
-      const res = await api.get(`/historial/paciente/${pacienteId}/pdf`, { responseType: 'blob' })
-      descargarBlob(res.data, `historial-retina-${paciente?.dni || pacienteId}.pdf`)
+      const res = await api.get(`/historial/paciente/${pacienteIdSeguro}/pdf`, { responseType: 'blob' })
+      descargarBlob(res.data, `historial-retina-${paciente?.dni || pacienteIdSeguro}.pdf`)
     } finally {
       setDescargando(false)
       setTipoDescarga(null)
@@ -128,12 +141,14 @@ export default function ReportesPdfPaciente() {
   }
 
   const descargarAnalisisSeleccionadoPdf = async () => {
-    if (!rep?.id) return
+    const historialIdSeguro = getSafeNumericId(rep?.id)
+    if (!historialIdSeguro) return
+
     setDescargando(true)
     setTipoDescarga('seleccionado')
     try {
-      const res = await api.get(`/historial/${rep.id}/pdf`, { responseType: 'blob' })
-      descargarBlob(res.data, `informe-retina-${rep.id}.pdf`)
+      const res = await api.get(`/historial/${historialIdSeguro}/pdf`, { responseType: 'blob' })
+      descargarBlob(res.data, `informe-retina-${historialIdSeguro}.pdf`)
     } finally {
       setDescargando(false)
       setTipoDescarga(null)
@@ -149,13 +164,14 @@ export default function ReportesPdfPaciente() {
     let objectUrl = null
 
     const cargarImagen = async () => {
-      if (!rep?.id) {
+      const historialIdSeguro = getSafeNumericId(rep?.id)
+      if (!historialIdSeguro) {
         setImagenBlobUrl(null)
         return
       }
       try {
-        const res = await api.get(`/historial/${rep.id}/imagen`, { responseType: 'blob' })
-        objectUrl = window.URL.createObjectURL(res.data)
+        const res = await api.get(`/historial/${historialIdSeguro}/imagen`, { responseType: 'blob' })
+        objectUrl = globalThis.URL.createObjectURL(res.data)
         if (activo) setImagenBlobUrl(objectUrl)
       } catch {
         if (activo) setImagenBlobUrl(null)
@@ -166,7 +182,7 @@ export default function ReportesPdfPaciente() {
 
     return () => {
       activo = false
-      if (objectUrl) window.URL.revokeObjectURL(objectUrl)
+      if (objectUrl) globalThis.URL.revokeObjectURL(objectUrl)
     }
   }, [rep?.id])
 
@@ -286,8 +302,8 @@ export default function ReportesPdfPaciente() {
                   <div style={s.card}>
                     <div style={s.cardLabel}>Hallazgos observados</div>
                     <ul style={s.listUl}>
-                      {hallazgos.map((h, i) => (
-                        <li key={i} style={s.li}>{h}</li>
+                      {hallazgos.map((h) => (
+                        <li key={h} style={s.li}>{h}</li>
                       ))}
                     </ul>
                   </div>

@@ -10,8 +10,14 @@ use App\Http\Controllers\API\RetinaController;
 
 // ── Preflight CORS para retina ─────────────────────
 Route::options('/retina/analizar', function() {
-    return response('', 200)
-        ->header('Access-Control-Allow-Origin', '*')
+    $allowedOrigins = config('cors.allowed_origins', []);
+    $origin = request()->headers->get('Origin');
+    $allowedOrigin = in_array($origin, $allowedOrigins, true)
+        ? $origin
+        : ($allowedOrigins[0] ?? 'http://localhost:5173');
+
+    return response('', 204)
+        ->header('Access-Control-Allow-Origin', $allowedOrigin)
         ->header('Access-Control-Allow-Methods', 'POST, OPTIONS')
         ->header('Access-Control-Allow-Headers', 'Content-Type, Authorization');
 });
@@ -28,11 +34,13 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::get('/me',      [AuthController::class, 'me']);
 
     // Pacientes
-    Route::get('/pacientes',         [PacienteController::class, 'index']);
-    Route::post('/pacientes',        [PacienteController::class, 'store']);
-    Route::get('/pacientes/{id}',    [PacienteController::class, 'show']);
-    Route::put('/pacientes/{id}',    [PacienteController::class, 'update']);
-    Route::delete('/pacientes/{id}', [PacienteController::class, 'destroy']);
+    $rutaPacientes = '/pacientes';
+    $rutaPaciente = $rutaPacientes . '/{id}';
+    Route::get($rutaPacientes,     [PacienteController::class, 'index']);
+    Route::post($rutaPacientes,    [PacienteController::class, 'store']);
+    Route::get($rutaPaciente,      [PacienteController::class, 'show']);
+    Route::put($rutaPaciente,      [PacienteController::class, 'update']);
+    Route::delete($rutaPaciente,   [PacienteController::class, 'destroy']);
 
     // Evaluaciones
     Route::post('/evaluaciones',               [EvaluacionController::class, 'store']);

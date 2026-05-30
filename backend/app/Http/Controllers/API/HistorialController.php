@@ -13,6 +13,8 @@ use Illuminate\Support\Facades\Storage;
 
 class HistorialController extends Controller
 {
+    private const DEFAULT_IMAGE_MIME = 'image/jpeg';
+
     // GET /api/historial/{paciente_id}
     public function porPaciente($paciente_id)
     {
@@ -26,7 +28,7 @@ class HistorialController extends Controller
                 return;
             }
             $registro->imagen->hallazgos = $this->normalizarArray($registro->imagen->hallazgos);
-            $registro->imagen->signos_rd = $this->normalizarObjeto($registro->imagen->signos_rd);
+            $registro->imagen->signos_rd = $this->normalizarArray($registro->imagen->signos_rd);
         });
 
         return response()->json($historial);
@@ -45,7 +47,7 @@ class HistorialController extends Controller
             $imagenUrl = Storage::disk('public')->path($ruta);
         }
         if (!$imagenUrl && !empty($registro->imagen?->imagen_base64)) {
-            $mime = $registro->imagen?->mime_type ?: 'image/jpeg';
+            $mime = $registro->imagen?->mime_type ?: self::DEFAULT_IMAGE_MIME;
             $imagenDataUri = 'data:' . $mime . ';base64,' . $registro->imagen->imagen_base64;
         }
 
@@ -94,29 +96,40 @@ class HistorialController extends Controller
         $registro = HistorialRetina::with('imagen')->findOrFail($historial_id);
         $ruta = $registro->imagen?->ruta_imagen;
 
-        if (!$ruta || !Storage::disk('public')->exists($ruta)) {
-            $base64 = $registro->imagen?->imagen_base64;
-            if (empty($base64)) {
-                return response()->json([
-                    'message' => 'No se encontro imagen asociada para este analisis.'
-                ], 404);
-            }
-            $mime = $registro->imagen?->mime_type ?: 'image/jpeg';
-            $contenido = base64_decode($base64, true);
-            if ($contenido === false) {
-                return response()->json([
-                    'message' => 'No se pudo reconstruir la imagen almacenada.'
-                ], 500);
-            }
-
-            return response($contenido, 200)
-                ->header('Content-Type', $mime)
-                ->header('Cache-Control', 'no-store, no-cache, must-revalidate, max-age=0');
+        $existeArchivo = $ruta && Storage::disk('public')->exists($ruta);
+        if (!$existeArchivo) {
+            return $this->responderImagenDesdeBase64($registro);
         }
 
-        $mime = $registro->imagen?->mime_type ?: (Storage::disk('public')->mimeType($ruta) ?: 'image/jpeg');
+        $mime = $registro->imagen?->mime_type
+            ?: (Storage::disk('public')->mimeType($ruta) ?: self::DEFAULT_IMAGE_MIME);
         $contenido = Storage::disk('public')->get($ruta);
 
+        return $this->responderImagen($contenido, $mime);
+    }
+
+    private function responderImagenDesdeBase64(HistorialRetina $registro)
+    {
+        $base64 = $registro->imagen?->imagen_base64;
+        if (empty($base64)) {
+            return response()->json([
+                'message' => 'No se encontro imagen asociada para este analisis.'
+            ], 404);
+        }
+
+        $contenido = base64_decode($base64, true);
+        if ($contenido === false) {
+            return response()->json([
+                'message' => 'No se pudo reconstruir la imagen almacenada.'
+            ], 500);
+        }
+
+        $mime = $registro->imagen?->mime_type ?: self::DEFAULT_IMAGE_MIME;
+        return $this->responderImagen($contenido, $mime);
+    }
+
+    private function responderImagen(string $contenido, string $mime)
+    {
         return response($contenido, 200)
             ->header('Content-Type', $mime)
             ->header('Cache-Control', 'no-store, no-cache, must-revalidate, max-age=0');
@@ -167,17 +180,4 @@ class HistorialController extends Controller
         return [];
     }
 
-    private function normalizarObjeto($valor): array
-    {
-        if (is_array($valor)) {
-            return $valor;
-        }
-        if (is_string($valor) && $valor !== '') {
-            $decoded = json_decode($valor, true);
-            if (is_array($decoded)) {
-                return $decoded;
-            }
-        }
-        return [];
-    }
 }

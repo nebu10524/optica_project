@@ -75,7 +75,7 @@ export default function AnalisisRetinaPage() {
           </p>
         </div>
 
-        {!pacienteSeleccionado ? (
+        {pacienteSeleccionado === null && (
           <div
             style={{
               opacity: visible ? 1 : 0,
@@ -95,7 +95,8 @@ export default function AnalisisRetinaPage() {
             ) : (
               <div style={s.grid}>
                 {pacientes.map((p, i) => (
-                  <div
+                  <button
+                    type="button"
                     key={p.id}
                     className="pac-card"
                     onClick={() => setPacienteSeleccionado(p)}
@@ -114,7 +115,7 @@ export default function AnalisisRetinaPage() {
                       <div style={s.pacNombre}>
                         {p.nombre} {p.apellido}
                       </div>
-                      <div style={s.pacDni}>DNI: {p.dni || '—'}</div>
+                      <div style={s.pacDni}>{`DNI: ${p.dni || '—'}`}</div>
                     </div>
 
                     <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
@@ -126,12 +127,13 @@ export default function AnalisisRetinaPage() {
                         strokeLinejoin="round"
                       />
                     </svg>
-                  </div>
+                  </button>
                 ))}
               </div>
             )}
           </div>
-        ) : (
+        )}
+        {pacienteSeleccionado && (
           <div>
             <div style={s.selectedBar}>
               <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
@@ -240,6 +242,10 @@ const s = {
     padding: '14px 18px',
     boxShadow: '0 8px 24px rgba(15,23,42,0.06)',
     border: '1px solid #e2e8f0',
+    width: '100%',
+    textAlign: 'left',
+    font: 'inherit',
+    cursor: 'pointer',
   },
   avatar: {
     width: 42,

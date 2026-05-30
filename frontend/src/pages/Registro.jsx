@@ -2,6 +2,42 @@ import { useState } from 'react'
 import { useNavigate, Link } from 'react-router-dom'
 import api from '../api/axios'
 
+function renderContenidoBotonRegistro(loading, exito) {
+  if (loading) {
+    return (
+      <>
+        <svg width="15" height="15" viewBox="0 0 15 15" fill="none"
+          style={{ animation: 'spin 1s linear infinite' }}>
+          <circle cx="7.5" cy="7.5" r="6" stroke="rgba(255,255,255,0.3)" strokeWidth="1.5"/>
+          <path d="M7.5 1.5A6 6 0 0113.5 7.5" stroke="white" strokeWidth="1.5" strokeLinecap="round"/>
+        </svg>
+        Creando cuenta...
+      </>
+    )
+  }
+  if (exito) {
+    return (
+      <>
+        <svg width="15" height="15" viewBox="0 0 15 15" fill="none">
+          <path d="M3 7.5l3.5 3.5L12 4" stroke="white" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"/>
+        </svg>
+        Cuenta creada
+      </>
+    )
+  }
+  return (
+    <>
+      <svg width="15" height="15" viewBox="0 0 16 16" fill="none">
+        <circle cx="8" cy="5.5" r="2.8" stroke="white" strokeWidth="1.4"/>
+        <path d="M2 14c0-3.314 2.686-6 6-6s6 2.686 6 6" stroke="white" strokeWidth="1.4" strokeLinecap="round"/>
+        <line x1="13" y1="2" x2="13" y2="6" stroke="white" strokeWidth="1.4" strokeLinecap="round"/>
+        <line x1="11" y1="4" x2="15" y2="4" stroke="white" strokeWidth="1.4" strokeLinecap="round"/>
+      </svg>
+      Crear cuenta
+    </>
+  )
+}
+
 export default function Registro() {
   const [form, setForm] = useState({
     nombre: '',
@@ -60,7 +96,7 @@ export default function Registro() {
     if (!p) return null
     if (p.length < 6)  return { nivel: 1, texto: 'Muy corta',  color: '#dc2626', bg: '#fee2e2' }
     if (p.length < 8)  return { nivel: 2, texto: 'Débil',      color: '#d97706', bg: '#fef3c7' }
-    if (p.length < 12 && /[0-9]/.test(p)) return { nivel: 3, texto: 'Aceptable', color: '#0696D7', bg: '#e6f2fb' }
+    if (p.length < 12 && /\d/.test(p)) return { nivel: 3, texto: 'Aceptable', color: '#0696D7', bg: '#e6f2fb' }
     return               { nivel: 4, texto: 'Fuerte',     color: '#16a34a', bg: '#dcfce7' }
   }
   const fuerza = fuerzaPass()
@@ -230,7 +266,7 @@ export default function Registro() {
             {/* ── Nombre y Apellido ── */}
             <div style={st.row2}>
               <div style={st.group}>
-                <label style={st.label}>
+                <label htmlFor="reg-nombre" style={st.label}>
                   Nombre <span style={{ color: '#ef4444' }}>*</span>
                 </label>
                 <div style={{ position: 'relative' }}>
@@ -240,6 +276,7 @@ export default function Registro() {
                       stroke="#94a3b8" strokeWidth="1.2" strokeLinecap="round" />
                   </svg>
                   <input
+                    id="reg-nombre"
                     className="reg-input"
                     type="text"
                     name="nombre"
@@ -252,7 +289,7 @@ export default function Registro() {
               </div>
 
               <div style={st.group}>
-                <label style={st.label}>
+                <label htmlFor="reg-apellido" style={st.label}>
                   Apellido <span style={{ color: '#ef4444' }}>*</span>
                 </label>
                 <div style={{ position: 'relative' }}>
@@ -262,6 +299,7 @@ export default function Registro() {
                       stroke="#94a3b8" strokeWidth="1.2" strokeLinecap="round" />
                   </svg>
                   <input
+                    id="reg-apellido"
                     className="reg-input"
                     type="text"
                     name="apellido"
@@ -276,7 +314,7 @@ export default function Registro() {
 
             {/* ── Email ── */}
             <div style={st.group}>
-              <label style={st.label}>
+              <label htmlFor="reg-email" style={st.label}>
                 Correo electrónico <span style={{ color: '#ef4444' }}>*</span>
               </label>
               <div style={{ position: 'relative' }}>
@@ -285,6 +323,7 @@ export default function Registro() {
                   <path d="M2 4.5l6 4 6-4" stroke="#94a3b8" strokeWidth="1.2" strokeLinecap="round" />
                 </svg>
                 <input
+                  id="reg-email"
                   className="reg-input"
                   type="email"
                   name="email"
@@ -298,7 +337,7 @@ export default function Registro() {
 
             {/* ── Contraseña ── */}
             <div style={st.group}>
-              <label style={st.label}>
+              <label htmlFor="reg-password" style={st.label}>
                 Contraseña <span style={{ color: '#ef4444' }}>*</span>
               </label>
               <div style={{ position: 'relative' }}>
@@ -308,6 +347,7 @@ export default function Registro() {
                   <circle cx="8" cy="10.5" r="1" fill="#94a3b8" />
                 </svg>
                 <input
+                  id="reg-password"
                   className="reg-input"
                   type={showPass ? 'text' : 'password'}
                   name="password"
@@ -363,7 +403,7 @@ export default function Registro() {
 
             {/* ── Confirmar contraseña ── */}
             <div style={st.group}>
-              <label style={st.label}>
+              <label htmlFor="reg-confirmar" style={st.label}>
                 Confirmar contraseña <span style={{ color: '#ef4444' }}>*</span>
               </label>
               <div style={{ position: 'relative' }}>
@@ -373,6 +413,7 @@ export default function Registro() {
                   <circle cx="8" cy="10.5" r="1" fill="#94a3b8" />
                 </svg>
                 <input
+                  id="reg-confirmar"
                   className={`reg-input ${passwordsMatch ? 'input-ok' : ''} ${passwordsMismatch ? 'input-err' : ''}`}
                   type={showConf ? 'text' : 'password'}
                   name="confirmar"
@@ -420,33 +461,7 @@ export default function Registro() {
               className="btn-reg"
               style={{ ...st.btn, opacity: loading || exito ? 0.7 : 1 }}
             >
-              {loading ? (
-                <>
-                  <svg width="15" height="15" viewBox="0 0 15 15" fill="none"
-                    style={{ animation: 'spin 1s linear infinite' }}>
-                    <circle cx="7.5" cy="7.5" r="6" stroke="rgba(255,255,255,0.3)" strokeWidth="1.5"/>
-                    <path d="M7.5 1.5A6 6 0 0113.5 7.5" stroke="white" strokeWidth="1.5" strokeLinecap="round"/>
-                  </svg>
-                  Creando cuenta...
-                </>
-              ) : exito ? (
-                <>
-                  <svg width="15" height="15" viewBox="0 0 15 15" fill="none">
-                    <path d="M3 7.5l3.5 3.5L12 4" stroke="white" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"/>
-                  </svg>
-                  Cuenta creada
-                </>
-              ) : (
-                <>
-                  <svg width="15" height="15" viewBox="0 0 16 16" fill="none">
-                    <circle cx="8" cy="5.5" r="2.8" stroke="white" strokeWidth="1.4"/>
-                    <path d="M2 14c0-3.314 2.686-6 6-6s6 2.686 6 6" stroke="white" strokeWidth="1.4" strokeLinecap="round"/>
-                    <line x1="13" y1="2" x2="13" y2="6" stroke="white" strokeWidth="1.4" strokeLinecap="round"/>
-                    <line x1="11" y1="4" x2="15" y2="4" stroke="white" strokeWidth="1.4" strokeLinecap="round"/>
-                  </svg>
-                  Crear cuenta
-                </>
-              )}
+              {renderContenidoBotonRegistro(loading, exito)}
             </button>
           </form>
 

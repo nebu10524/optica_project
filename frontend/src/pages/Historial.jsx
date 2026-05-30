@@ -124,7 +124,7 @@ export default function Historial() {
           <div style={s.pageTag}>Registros clínicos</div>
           <h2 style={s.pageTitle}>Historial de retina</h2>
           <p style={s.pageSub}>
-            {historial.length} análisis registrado{historial.length !== 1 ? 's' : ''}
+            {`${historial.length} análisis registrado${historial.length === 1 ? '' : 's'}`}
           </p>
         </div>
 

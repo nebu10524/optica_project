@@ -1,4 +1,5 @@
 import { useState, useRef } from 'react'
+import PropTypes from 'prop-types'
 import api from '../api/axios'
 
 // ── Colores por clasificación ────────────────────────────────────────────────
@@ -35,7 +36,6 @@ export default function AnalisisRetina({ pacienteId, nombrePaciente }) {
   const [preview,   setPreview]   = useState(null)
   const [cargando,  setCargando]  = useState(false)
   const [reporte,   setReporte]   = useState(null)
-  const [imagenUrl, setImagenUrl] = useState(null)
   const [error,     setError]     = useState(null)
   const inputRef = useRef()
 
@@ -63,7 +63,6 @@ export default function AnalisisRetina({ pacienteId, nombrePaciente }) {
       const res = await api.post('retina/analizar', formData)
 
       setReporte(res.data.reporte)
-      setImagenUrl(res.data.imagen_url)
     } catch (err) {
       setError(err.response?.data?.error || 'Error al analizar la imagen')
     } finally {
@@ -76,7 +75,6 @@ export default function AnalisisRetina({ pacienteId, nombrePaciente }) {
     setPreview(null)
     setReporte(null)
     setError(null)
-    setImagenUrl(null)
     if (inputRef.current) inputRef.current.value = ''
   }
 
@@ -112,13 +110,16 @@ export default function AnalisisRetina({ pacienteId, nombrePaciente }) {
 
         {/* Panel izquierdo — subida de imagen */}
         <div style={{ flex: '0 0 300px' }}>
-          <div
+          <button
+            type="button"
             onClick={() => inputRef.current?.click()}
             style={{
               border: `2px dashed ${preview ? '#3b82f6' : '#425677'}`,
               borderRadius: 16, padding: 16, cursor: 'pointer',
               background: preview ? '#f8fbff' : '#ffffff',
               textAlign: 'center', transition: 'all 0.2s',
+              width: '100%',
+              font: 'inherit',
               minHeight: 260, display: 'flex', flexDirection: 'column',
               alignItems: 'center', justifyContent: 'center',
               borderColor: preview ? '#93c5fd' : '#cbd5e1'
@@ -142,7 +143,7 @@ export default function AnalisisRetina({ pacienteId, nombrePaciente }) {
                 </p>
               </>
             )}
-          </div>
+          </button>
 
           <input
             ref={inputRef}
@@ -262,8 +263,8 @@ export default function AnalisisRetina({ pacienteId, nombrePaciente }) {
                   Hallazgos observados
                 </h4>
                 <ul style={{ margin: 0, paddingLeft: 18 }}>
-                  {reporte.hallazgos.map((h, i) => (
-                    <li key={i} style={{ fontSize: 13, color: '#334155', marginBottom: 4 }}>{h}</li>
+                  {reporte.hallazgos.map((h) => (
+                    <li key={h} style={{ fontSize: 13, color: '#334155', marginBottom: 4 }}>{h}</li>
                   ))}
                 </ul>
               </div>
@@ -293,4 +294,9 @@ export default function AnalisisRetina({ pacienteId, nombrePaciente }) {
       </div>
     </div>
   )
+}
+
+AnalisisRetina.propTypes = {
+  pacienteId: PropTypes.oneOfType([PropTypes.string, PropTypes.number]),
+  nombrePaciente: PropTypes.string,
 }

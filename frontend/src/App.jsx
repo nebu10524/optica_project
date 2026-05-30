@@ -1,4 +1,5 @@
 import { BrowserRouter, Routes, Route, useLocation } from 'react-router-dom'
+import PropTypes from 'prop-types'
 import { AuthProvider } from './context/AuthContext'
 import PrivateRoute from './components/PrivateRoute'
 import NavBar from './components/Navbar'
@@ -23,6 +24,10 @@ function Layout({ children }) {
       </main>
     </>
   )
+}
+
+Layout.propTypes = {
+  children: PropTypes.node,
 }
 
 function AppContent() {

@@ -2,6 +2,31 @@ import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import api from '../api/axios'
 
+function renderContenidoBotonSubmit(loading, exito) {
+  if (loading) {
+    return (
+      <>
+        <svg width="14" height="14" viewBox="0 0 14 14" fill="none" style={{ animation: 'spin 1s linear infinite' }}>
+          <circle cx="7" cy="7" r="5.5" stroke="rgba(255,255,255,0.3)" strokeWidth="1.5" />
+          <path d="M7 1.5A5.5 5.5 0 0112.5 7" stroke="white" strokeWidth="1.5" strokeLinecap="round" />
+        </svg>
+        Registrando...
+      </>
+    )
+  }
+  if (exito) {
+    return <>✓ Registrado</>
+  }
+  return (
+    <>
+      <svg width="14" height="14" viewBox="0 0 16 16" fill="none">
+        <path d="M3 8h10M9 4l4 4-4 4" stroke="white" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" />
+      </svg>
+      Registrar paciente
+    </>
+  )
+}
+
 export default function NuevoPaciente() {
   const [form, setForm] = useState({
     nombre: '', apellido: '', dni: '',
@@ -277,9 +302,10 @@ export default function NuevoPaciente() {
               </div>
               <div style={s.grid2}>
                 <div style={s.fieldGroup}>
-                  <label style={s.label}>Género</label>
+                  <label htmlFor="paciente-genero" style={s.label}>Género</label>
                   <div style={{ position: 'relative' }}>
                     <select
+                      id="paciente-genero"
                       className="field-select"
                       name="genero"
                       value={form.genero}
@@ -309,24 +335,7 @@ export default function NuevoPaciente() {
                   opacity: loading || exito ? 0.7 : 1,
                 }}
               >
-                {loading ? (
-                  <>
-                    <svg width="14" height="14" viewBox="0 0 14 14" fill="none" style={{ animation: 'spin 1s linear infinite' }}>
-                      <circle cx="7" cy="7" r="5.5" stroke="rgba(255,255,255,0.3)" strokeWidth="1.5" />
-                      <path d="M7 1.5A5.5 5.5 0 0112.5 7" stroke="white" strokeWidth="1.5" strokeLinecap="round" />
-                    </svg>
-                    Registrando...
-                  </>
-                ) : exito ? (
-                  <>✓ Registrado</>
-                ) : (
-                  <>
-                    <svg width="14" height="14" viewBox="0 0 16 16" fill="none">
-                      <path d="M3 8h10M9 4l4 4-4 4" stroke="white" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" />
-                    </svg>
-                    Registrar paciente
-                  </>
-                )}
+                {renderContenidoBotonSubmit(loading, exito)}
               </button>
               <button
                 type="button"

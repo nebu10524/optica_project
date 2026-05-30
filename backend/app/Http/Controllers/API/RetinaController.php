@@ -6,11 +6,13 @@ use App\Http\Controllers\Controller;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Storage;
 use App\Models\Evaluacion;
 use App\Models\ImagenRetina;
 use App\Models\HistorialRetina;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
+use Symfony\Component\HttpKernel\Exception\HttpException;
 
 class RetinaController extends Controller
 {
@@ -26,10 +28,15 @@ class RetinaController extends Controller
             $allowed = [];
         }
         $isWildcard = in_array('*', $allowed, true);
+        $fallbackOrigin = $allowed[0] ?? '*';
 
-        $allowOrigin = $isWildcard
-            ? ($origin ?: '*')
-            : (in_array((string) $origin, $allowed, true) ? $origin : ($origin ?: ($allowed[0] ?? '*')));
+        if ($isWildcard) {
+            $allowOrigin = $origin ?: '*';
+        } elseif (in_array((string) $origin, $allowed, true)) {
+            $allowOrigin = $origin;
+        } else {
+            $allowOrigin = $origin ?: $fallbackOrigin;
+        }
 
         return [
             'Access-Control-Allow-Origin' => (string) $allowOrigin,
@@ -52,7 +59,170 @@ class RetinaController extends Controller
         $base64   = base64_encode(file_get_contents($archivo->getRealPath()));
         $mimeType = $archivo->getMimeType();
 
-        $prompt = <<<PROMPT
+        $prompt = $this->getPromptAnalisisRetina();
+
+        $apiKey = config('services.gemini.key');
+
+        $response = Http::timeout(60)->post(
+            "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key={$apiKey}",
+            [
+                'contents' => [[
+                    'parts' => [
+                        [
+                            'inline_data' => [
+                                'mime_type' => $mimeType,
+                                'data'      => $base64,
+                            ]
+                        ],
+                        ['text' => $prompt]
+                    ]
+                ]],
+                'generationConfig' => [
+                    'temperature'     => 0.1,
+                    'maxOutputTokens' => 3000,
+                ]
+            ]
+        );
+
+        if (!$response->successful()) {
+            Log::error('Gemini error', [
+                'status' => $response->status(),
+                'body'   => $response->body()
+            ]);
+
+            throw new HttpException(500, json_encode([
+                'error'   => 'Error al conectar con Gemini',
+                'status'  => $response->status(),
+                'detalle' => $response->json(),
+            ]));
+        }
+
+        $texto = $response->json('candidates.0.content.parts.0.text', '');
+
+        $texto = preg_replace('/```json\s*/i', '', $texto);
+        $texto = preg_replace('/```\s*/i', '', $texto);
+        $texto = trim($texto);
+
+        if (preg_match('/\{.*\}/s', $texto, $matches)) {
+            $texto = $matches[0];
+        }
+
+        $reporte = json_decode($texto, true);
+
+        if (!$reporte) {
+            Log::warning('IA devolvió JSON incompleto', [
+                'raw'        => $texto,
+                'json_error' => json_last_error_msg()
+            ]);
+
+            $reporte = [
+                "clasificacion"   => "Sin RD",
+                "nivel_confianza" => "Bajo",
+                "hallazgos"       => ["No se pudo analizar completamente la imagen"],
+                "signos_rd"       => [
+                    "microaneurismas"    => false,
+                    "hemorragias"        => false,
+                    "exudados_duros"     => false,
+                    "exudados_blandos"   => false,
+                    "neovascularizacion" => false,
+                    "edema_macular"      => false
+                ],
+                "recomendacion" => "Repetir el análisis con una imagen más clara.",
+                "urgencia"      => "Rutina"
+            ];
+        }
+
+        $usuarioId = $request->user()?->id;
+        if (!$usuarioId) {
+            throw new HttpException(401, json_encode([
+                'message' => 'Usuario no autenticado.',
+            ]));
+        }
+
+        $nombreArchivo = Str::uuid() . '.' . $archivo->getClientOriginalExtension();
+        $rutaImagen = null;
+        $evaluacion = null;
+        $imagenRetina = null;
+
+        try {
+            // Guardar imagen en storage
+            $rutaImagen = $archivo->storeAs('retinas', $nombreArchivo, 'public');
+
+            DB::transaction(function () use (
+                $request,
+                $usuarioId,
+                $rutaImagen,
+                $nombreArchivo,
+                $mimeType,
+                $base64,
+                $reporte,
+                &$evaluacion,
+                &$imagenRetina
+            ) {
+                // Crear evaluación — tabla: evaluaciones_retina
+                $evaluacion = Evaluacion::create([
+                    'paciente_id'   => $request->paciente_id,
+                    'usuario_id'    => $usuarioId,
+                    'observaciones' => null,
+                ]);
+
+                // Guardar imagen con reporte — tabla: imagenes_retina
+                $imagenRetina = ImagenRetina::create([
+                    'evaluacion_id'   => $evaluacion->id,
+                    'paciente_id'     => $request->paciente_id,
+                    'ruta_imagen'     => $rutaImagen,
+                    'nombre_archivo'  => $nombreArchivo,
+                    'mime_type'       => $mimeType,
+                    // Persistimos la imagen en DB para que el PDF siga mostrando
+                    // la evidencia incluso si el disco efimero de Render se limpia.
+                    'imagen_base64'   => $base64,
+                    'clasificacion'   => $reporte['clasificacion'],
+                    'nivel_confianza' => $reporte['nivel_confianza'],
+                    'urgencia'        => $reporte['urgencia'],
+                    // Se guarda como array nativo para evitar doble codificacion JSON.
+                    'hallazgos'       => $reporte['hallazgos'] ?? [],
+                    'signos_rd'       => $reporte['signos_rd'] ?? [],
+                    'recomendacion'   => $reporte['recomendacion'],
+                    'modelo_ia'       => 'gemini-2.5-flash',
+                ]);
+
+                // Guardar en historial — tabla: historial_retina
+                HistorialRetina::create([
+                    'paciente_id'     => $request->paciente_id,
+                    'evaluacion_id'   => $evaluacion->id,
+                    'imagen_id'       => $imagenRetina->id,
+                    'clasificacion'   => $imagenRetina->clasificacion,
+                    'urgencia'        => $imagenRetina->urgencia,
+                    'nivel_confianza' => $imagenRetina->nivel_confianza,
+                ]);
+            });
+        } catch (\Throwable $e) {
+            if ($rutaImagen && Storage::disk('public')->exists($rutaImagen)) {
+                Storage::disk('public')->delete($rutaImagen);
+            }
+
+            Log::error('Error guardando analisis de retina', [
+                'message' => $e->getMessage(),
+            ]);
+
+            throw new HttpException(500, json_encode([
+                'message' => 'No se pudo guardar el analisis.',
+            ]));
+        }
+
+        return response()->json([
+            'reporte'       => $reporte,
+            'imagen_url'    => asset('storage/' . $rutaImagen),
+            'modelo'        => 'gemini-2.5-flash',
+            'paciente_id'   => $request->paciente_id,
+            'evaluacion_id' => $evaluacion->id,
+            'imagen_id'     => $imagenRetina->id,
+        ], 200, $cors);
+    }
+
+    private function getPromptAnalisisRetina(): string
+    {
+        return <<<'PROMPT'
 Eres un sistema experto en análisis de retinografías con capacidad de visión computacional avanzada, entrenado específicamente para detectar Retinopatía Diabética siguiendo la escala internacional ICDR.
 
 ## INSTRUCCIONES DE ANÁLISIS VISUAL
@@ -127,163 +297,5 @@ Responde ÚNICAMENTE en este formato JSON exacto, sin texto adicional:
   "urgencia": "Rutina | Prioridad | Urgente"
 }
 PROMPT;
-
-        $apiKey = config('services.gemini.key');
-
-        $response = Http::timeout(60)->post(
-            "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key={$apiKey}",
-            [
-                'contents' => [[
-                    'parts' => [
-                        [
-                            'inline_data' => [
-                                'mime_type' => $mimeType,
-                                'data'      => $base64,
-                            ]
-                        ],
-                        ['text' => $prompt]
-                    ]
-                ]],
-                'generationConfig' => [
-                    'temperature'     => 0.1,
-                    'maxOutputTokens' => 3000,
-                ]
-            ]
-        );
-
-        if (!$response->successful()) {
-            Log::error('Gemini error', [
-                'status' => $response->status(),
-                'body'   => $response->body()
-            ]);
-
-            return response()->json([
-                'error'   => 'Error al conectar con Gemini',
-                'status'  => $response->status(),
-                'detalle' => $response->json()
-            ], 500, $cors);
-        }
-
-        $texto = $response->json('candidates.0.content.parts.0.text', '');
-
-        $texto = preg_replace('/```json\s*/i', '', $texto);
-        $texto = preg_replace('/```\s*/i', '', $texto);
-        $texto = trim($texto);
-
-        if (preg_match('/\{.*\}/s', $texto, $matches)) {
-            $texto = $matches[0];
-        }
-
-        $reporte = json_decode($texto, true);
-
-        if (!$reporte) {
-            Log::warning('IA devolvió JSON incompleto', [
-                'raw'        => $texto,
-                'json_error' => json_last_error_msg()
-            ]);
-
-            $reporte = [
-                "clasificacion"   => "Sin RD",
-                "nivel_confianza" => "Bajo",
-                "hallazgos"       => ["No se pudo analizar completamente la imagen"],
-                "signos_rd"       => [
-                    "microaneurismas"    => false,
-                    "hemorragias"        => false,
-                    "exudados_duros"     => false,
-                    "exudados_blandos"   => false,
-                    "neovascularizacion" => false,
-                    "edema_macular"      => false
-                ],
-                "recomendacion" => "Repetir el análisis con una imagen más clara.",
-                "urgencia"      => "Rutina"
-            ];
-        }
-
-        $usuarioId = $request->user()?->id;
-        if (!$usuarioId) {
-            return response()->json([
-                'message' => 'Usuario no autenticado.'
-            ], 401, $cors);
-        }
-
-        $nombreArchivo = Str::uuid() . '.' . $archivo->getClientOriginalExtension();
-        $rutaImagen = null;
-        $evaluacion = null;
-        $imagenRetina = null;
-
-        try {
-            // Guardar imagen en storage
-            $rutaImagen = $archivo->storeAs('retinas', $nombreArchivo, 'public');
-
-            DB::transaction(function () use (
-                $request,
-                $usuarioId,
-                $rutaImagen,
-                $nombreArchivo,
-                $mimeType,
-                $base64,
-                $reporte,
-                &$evaluacion,
-                &$imagenRetina
-            ) {
-                // Crear evaluación — tabla: evaluaciones_retina
-                $evaluacion = Evaluacion::create([
-                    'paciente_id'   => $request->paciente_id,
-                    'usuario_id'    => $usuarioId,
-                    'observaciones' => null,
-                ]);
-
-                // Guardar imagen con reporte — tabla: imagenes_retina
-                $imagenRetina = ImagenRetina::create([
-                    'evaluacion_id'   => $evaluacion->id,
-                    'paciente_id'     => $request->paciente_id,
-                    'ruta_imagen'     => $rutaImagen,
-                    'nombre_archivo'  => $nombreArchivo,
-                    'mime_type'       => $mimeType,
-                    // Persistimos la imagen en DB para que el PDF siga mostrando
-                    // la evidencia incluso si el disco efimero de Render se limpia.
-                    'imagen_base64'   => $base64,
-                    'clasificacion'   => $reporte['clasificacion'],
-                    'nivel_confianza' => $reporte['nivel_confianza'],
-                    'urgencia'        => $reporte['urgencia'],
-                    // Se guarda como array nativo para evitar doble codificacion JSON.
-                    'hallazgos'       => $reporte['hallazgos'] ?? [],
-                    'signos_rd'       => $reporte['signos_rd'] ?? [],
-                    'recomendacion'   => $reporte['recomendacion'],
-                    'modelo_ia'       => 'gemini-2.5-flash',
-                ]);
-
-                // Guardar en historial — tabla: historial_retina
-                HistorialRetina::create([
-                    'paciente_id'     => $request->paciente_id,
-                    'evaluacion_id'   => $evaluacion->id,
-                    'imagen_id'       => $imagenRetina->id,
-                    'clasificacion'   => $imagenRetina->clasificacion,
-                    'urgencia'        => $imagenRetina->urgencia,
-                    'nivel_confianza' => $imagenRetina->nivel_confianza,
-                ]);
-            });
-        } catch (\Throwable $e) {
-            if ($rutaImagen && \Illuminate\Support\Facades\Storage::disk('public')->exists($rutaImagen)) {
-                \Illuminate\Support\Facades\Storage::disk('public')->delete($rutaImagen);
-            }
-
-            Log::error('Error guardando analisis de retina', [
-                'message' => $e->getMessage(),
-            ]);
-
-            return response()->json([
-                'message' => 'No se pudo guardar el analisis.'
-            ], 500, $cors);
-        }
-
-        return response()->json([
-            'reporte'       => $reporte,
-            'imagen_url'    => asset('storage/' . $rutaImagen),
-            'modelo'        => 'gemini-2.5-flash',
-            'paciente_id'   => $request->paciente_id,
-            'evaluacion_id' => $evaluacion->id,
-            'imagen_id'     => $imagenRetina->id,
-        ], 200, $cors);
     }
 }
