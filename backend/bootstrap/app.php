@@ -12,4 +12,7 @@ return Application::configure(basePath: dirname(__DIR__))
     )
     ->withMiddleware(function (Middleware $middleware) {
         $middleware->prepend(\Illuminate\Http\Middleware\HandleCors::class);
+    })
+    ->withExceptions(function (Illuminate\Foundation\Configuration\Exceptions $exceptions) {
+        //
     })->create();

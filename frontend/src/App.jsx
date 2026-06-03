@@ -7,7 +7,6 @@ import Login from './pages/Login'
 import Registro from './pages/Registro'
 import Dashboard from './pages/Dashboard'
 import Pacientes from './pages/Pacientes'
-import NuevoPaciente from './pages/NuevoPaciente'
 import Historial from './pages/Historial'
 import AnalisisRetinaPage from './pages/AnalisisRetinaPage'
 import ReportesPdf from './pages/ReportesPdf'
@@ -53,10 +52,6 @@ function AppContent() {
 
         <Route path="/pacientes" element={
           <PrivateRoute><Layout><Pacientes /></Layout></PrivateRoute>
-        }/>
-
-        <Route path="/pacientes/nuevo" element={
-          <PrivateRoute><Layout><NuevoPaciente /></Layout></PrivateRoute>
         }/>
 
         <Route path="/historial/:pacienteId" element={

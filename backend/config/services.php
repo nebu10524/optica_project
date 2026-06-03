@@ -15,6 +15,11 @@ return [
     */
     'gemini' => ['key' => env('GEMINI_API_KEY')],
 
+    'apisperu' => [
+        'token' => env('APISPERU_TOKEN'),
+        'dni_url' => env('APISPERU_DNI_URL', 'https://dniruc.apisperu.com/api/v1/dni'),
+    ],
+
     'postmark' => [
         'key' => env('POSTMARK_API_KEY'),
     ],

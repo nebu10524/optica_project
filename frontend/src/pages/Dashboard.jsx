@@ -207,9 +207,9 @@ export default function Dashboard() {
                 {totalPacientes}
               </div>
             )}
-            titulo="Pacientes registrados"
-            descripcion="Pacientes activos en el sistema de gestión visual"
-            hoverNote="Entrar al panel de pacientes"
+            titulo="Buscar pacientes"
+            descripcion="Busca por DNI con RENIEC e inicia la evaluación"
+            hoverNote="Buscar paciente por DNI"
           />
 
           <DashboardCard

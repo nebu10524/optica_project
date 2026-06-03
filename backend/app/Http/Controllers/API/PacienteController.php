@@ -9,15 +9,139 @@ use App\Models\ImagenRetina;
 use App\Models\Paciente;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Storage;
 
 class PacienteController extends Controller
 {
+    private const DNI_REGEX = '/^\d{8}$/';
+
     public function index()
     {
         return response()->json(
             Paciente::orderBy('created_at', 'desc')->get()
         );
+    }
+
+    /**
+     * Consulta los datos de una persona por DNI en RENIEC (apisperu).
+     * Devuelve los datos para mostrarlos antes de iniciar la evaluacion.
+     */
+    public function buscarReniec($dni)
+    {
+        if (!preg_match(self::DNI_REGEX, (string) $dni)) {
+            return response()->json([
+                'message' => 'El DNI debe tener exactamente 8 digitos.'
+            ], 422);
+        }
+
+        $existente = Paciente::where('dni', $dni)->first();
+        $data = $this->consultarReniec($dni);
+
+        if ($data === null) {
+            // Si RENIEC falla pero ya esta registrado localmente, usamos lo local.
+            if ($existente) {
+                return response()->json([
+                    'dni'             => $dni,
+                    'nombres'         => $existente->nombre,
+                    'apellido'        => $existente->apellido,
+                    'nombre_completo' => trim($existente->nombre . ' ' . $existente->apellido),
+                    'ya_registrado'   => true,
+                    'paciente_id'     => $existente->id,
+                    'fuente'          => 'local',
+                ]);
+            }
+
+            return response()->json([
+                'message' => 'No se encontro el DNI en RENIEC o el servicio no esta disponible.'
+            ], 404);
+        }
+
+        $nombres  = $data['nombres'] ?? '';
+        $apellido = trim(($data['apellidoPaterno'] ?? '') . ' ' . ($data['apellidoMaterno'] ?? ''));
+
+        return response()->json([
+            'dni'             => $dni,
+            'nombres'         => $nombres,
+            'apellidoPaterno' => $data['apellidoPaterno'] ?? '',
+            'apellidoMaterno' => $data['apellidoMaterno'] ?? '',
+            'apellido'        => $apellido,
+            'nombre_completo' => trim($nombres . ' ' . $apellido),
+            'ya_registrado'   => (bool) $existente,
+            'paciente_id'     => $existente?->id,
+            'fuente'          => 'reniec',
+        ]);
+    }
+
+    /**
+     * Busca o crea un paciente a partir del DNI (datos de RENIEC) y lo devuelve.
+     * Se usa justo antes de iniciar la evaluacion, sin formulario manual.
+     */
+    public function desdeDni(Request $request)
+    {
+        $request->validate([
+            'dni' => ['required', 'string', 'regex:' . self::DNI_REGEX],
+        ]);
+
+        $dni = $request->dni;
+
+        $paciente = Paciente::where('dni', $dni)->first();
+        if ($paciente) {
+            return response()->json($paciente);
+        }
+
+        $data = $this->consultarReniec($dni);
+        if ($data === null) {
+            return response()->json([
+                'message' => 'No se pudieron obtener los datos del DNI en RENIEC.'
+            ], 404);
+        }
+
+        $nombres  = trim($data['nombres'] ?? '');
+        $apellido = trim(($data['apellidoPaterno'] ?? '') . ' ' . ($data['apellidoMaterno'] ?? ''));
+
+        $paciente = Paciente::create([
+            'nombre'         => $nombres !== '' ? $nombres : 'Sin nombre',
+            'apellido'       => $apellido !== '' ? $apellido : 'N/D',
+            'dni'            => $dni,
+            'registrado_por' => $request->user()->id,
+        ]);
+
+        return response()->json($paciente, 201);
+    }
+
+    /**
+     * Llama a la API de apisperu para consultar un DNI.
+     * Retorna el arreglo de datos si tuvo exito, o null en caso contrario.
+     */
+    private function consultarReniec(string $dni): ?array
+    {
+        $token = config('services.apisperu.token');
+        $baseUrl = rtrim(config('services.apisperu.dni_url'), '/');
+
+        if (empty($token)) {
+            return null;
+        }
+
+        try {
+            $response = Http::timeout(15)->get("{$baseUrl}/{$dni}", [
+                'token' => $token,
+            ]);
+        } catch (\Throwable $e) {
+            return null;
+        }
+
+        if (!$response->successful()) {
+            return null;
+        }
+
+        $data = $response->json();
+
+        if (!is_array($data) || empty($data['success'])) {
+            return null;
+        }
+
+        return $data;
     }
 
     public function store(Request $request)

@@ -38,6 +38,9 @@ Route::middleware('auth:sanctum')->group(function () {
     $rutaPaciente = $rutaPacientes . '/{id}';
     Route::get($rutaPacientes,     [PacienteController::class, 'index']);
     Route::post($rutaPacientes,    [PacienteController::class, 'store']);
+    // Busqueda por DNI (RENIEC) y alta automatica sin formulario
+    Route::get('/reniec/{dni}',           [PacienteController::class, 'buscarReniec']);
+    Route::post('/pacientes/desde-dni',   [PacienteController::class, 'desdeDni']);
     Route::get($rutaPaciente,      [PacienteController::class, 'show']);
     Route::put($rutaPaciente,      [PacienteController::class, 'update']);
     Route::delete($rutaPaciente,   [PacienteController::class, 'destroy']);

@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\Facades\Storage;
 use App\Models\Evaluacion;
 use App\Models\ImagenRetina;
@@ -115,22 +116,10 @@ class RetinaController extends Controller
                 'json_error' => json_last_error_msg()
             ]);
 
-            $reporte = [
-                "clasificacion"   => "Sin RD",
-                "nivel_confianza" => "Bajo",
-                "hallazgos"       => ["No se pudo analizar completamente la imagen"],
-                "signos_rd"       => [
-                    "microaneurismas"    => false,
-                    "hemorragias"        => false,
-                    "exudados_duros"     => false,
-                    "exudados_blandos"   => false,
-                    "neovascularizacion" => false,
-                    "edema_macular"      => false
-                ],
-                "recomendacion" => "Repetir el análisis con una imagen más clara.",
-                "urgencia"      => "Rutina"
-            ];
+            $reporte = [];
         }
+
+        $reporte = array_replace_recursive($this->reportePorDefecto(), $reporte);
 
         $usuarioId = $request->user()?->id;
         if (!$usuarioId) {
@@ -167,15 +156,12 @@ class RetinaController extends Controller
                 ]);
 
                 // Guardar imagen con reporte — tabla: imagenes_retina
-                $imagenRetina = ImagenRetina::create([
+                $datosImagen = [
                     'evaluacion_id'   => $evaluacion->id,
                     'paciente_id'     => $request->paciente_id,
                     'ruta_imagen'     => $rutaImagen,
                     'nombre_archivo'  => $nombreArchivo,
                     'mime_type'       => $mimeType,
-                    // Persistimos la imagen en DB para que el PDF siga mostrando
-                    // la evidencia incluso si el disco efimero de Render se limpia.
-                    'imagen_base64'   => $base64,
                     'clasificacion'   => $reporte['clasificacion'],
                     'nivel_confianza' => $reporte['nivel_confianza'],
                     'urgencia'        => $reporte['urgencia'],
@@ -184,7 +170,14 @@ class RetinaController extends Controller
                     'signos_rd'       => $reporte['signos_rd'] ?? [],
                     'recomendacion'   => $reporte['recomendacion'],
                     'modelo_ia'       => 'gemini-2.5-flash',
-                ]);
+                ];
+
+                if (Schema::hasColumn('imagenes_retina', 'imagen_base64') && strlen($base64) <= 2_500_000) {
+                    // Guardar base64 solo cuando es pequeño para evitar limites de MySQL.
+                    $datosImagen['imagen_base64'] = $base64;
+                }
+
+                $imagenRetina = ImagenRetina::create($datosImagen);
 
                 // Guardar en historial — tabla: historial_retina
                 HistorialRetina::create([
@@ -203,11 +196,18 @@ class RetinaController extends Controller
 
             Log::error('Error guardando analisis de retina', [
                 'message' => $e->getMessage(),
+                'trace'   => $e->getTraceAsString(),
             ]);
 
-            throw new HttpException(500, json_encode([
+            $payload = [
                 'message' => 'No se pudo guardar el analisis.',
-            ]));
+            ];
+
+            if (config('app.debug')) {
+                $payload['detalle'] = $e->getMessage();
+            }
+
+            throw new HttpException(500, json_encode($payload));
         }
 
         return response()->json([
@@ -297,5 +297,24 @@ Responde ÚNICAMENTE en este formato JSON exacto, sin texto adicional:
   "urgencia": "Rutina | Prioridad | Urgente"
 }
 PROMPT;
+    }
+
+    private function reportePorDefecto(): array
+    {
+        return [
+            'clasificacion'   => 'Sin RD',
+            'nivel_confianza' => 'Bajo',
+            'hallazgos'       => ['No se pudo analizar completamente la imagen'],
+            'signos_rd'       => [
+                'microaneurismas'    => false,
+                'hemorragias'        => false,
+                'exudados_duros'     => false,
+                'exudados_blandos'   => false,
+                'neovascularizacion' => false,
+                'edema_macular'      => false,
+            ],
+            'recomendacion' => 'Repetir el análisis con una imagen más clara.',
+            'urgencia'      => 'Rutina',
+        ];
     }
 }
