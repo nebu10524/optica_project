@@ -1,6 +1,9 @@
 # Documentación local (PDF, patentes, pruebas, informes): no se sube al remoto.
 Docs/
 
+# Scripts locales de generación de documentos (PPT/Word/Excel): no necesarios para desplegar.
+agent-tools/
+
 # Salidas locales de plantillas Word en la raíz (genéricas)
 Documento_*.docx
 Plantilla_*.docx
