@@ -4,10 +4,15 @@ use Illuminate\Support\Str;
 use Pdo\Mysql;
 
 $defaultDbHost = '127.0.0.1';
-$mysqlSslCaAttribute = PHP_VERSION_ID >= 80500 ? Mysql::ATTR_SSL_CA : PDO::MYSQL_ATTR_SSL_CA;
-$mysqlOptions = extension_loaded('pdo_mysql')
-    ? array_filter([$mysqlSslCaAttribute => env('MYSQL_ATTR_SSL_CA')])
-    : [];
+
+// La constante MYSQL_ATTR_SSL_CA solo existe si la extension pdo_mysql esta cargada.
+// En despliegues con PostgreSQL (Neon) no se instala pdo_mysql, por lo que debemos
+// resolver el atributo unicamente cuando la extension este disponible.
+$mysqlOptions = [];
+if (extension_loaded('pdo_mysql')) {
+    $mysqlSslCaAttribute = PHP_VERSION_ID >= 80500 ? Mysql::ATTR_SSL_CA : PDO::MYSQL_ATTR_SSL_CA;
+    $mysqlOptions = array_filter([$mysqlSslCaAttribute => env('MYSQL_ATTR_SSL_CA')]);
+}
 
 return [
 
