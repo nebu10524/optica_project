@@ -1,6 +1,9 @@
 import { useEffect, useState } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import api from '../api/axios'
+import { getClasificacionBadge } from '../constants/retinopatia'
+import { iniciales, formatFecha } from '../utils/format'
+import { pageBackground } from '../theme/pageStyles'
 
 export default function Historial() {
   const { pacienteId } = useParams()
@@ -14,37 +17,12 @@ export default function Historial() {
   const [modalAnalisis, setModalAnalisis] = useState({ abierto: false, id: null })
   const [eliminandoAnalisis, setEliminandoAnalisis] = useState(false)
 
+  // Al entrar, cargamos los datos del paciente y su historial de análisis
   useEffect(() => {
     api.get(`/pacientes/${pacienteId}`).then(res => setPaciente(res.data))
     api.get(`/historial/${pacienteId}`).then(res => setHistorial(res.data))
     setTimeout(() => setVisible(true), 80)
   }, [pacienteId])
-
-  const iniciales = (p) =>
-    `${p?.nombre?.[0] || ''}${p?.apellido?.[0] || ''}`.toUpperCase()
-
-  const formatFecha = (iso) =>
-    iso
-      ? new Date(iso).toLocaleDateString('es-PE', {
-          day: '2-digit',
-          month: 'short',
-          year: 'numeric',
-        })
-      : '—'
-
-  const clasificacionConfig = {
-    'Sin RD': { color: '#16a34a', bg: '#dcfce7', border: '#bbf7d0' },
-    'Leve': { color: '#ca8a04', bg: '#fef9c3', border: '#fde68a' },
-    'Moderada': { color: '#ea580c', bg: '#ffedd5', border: '#fdba74' },
-    'Severa/Proliferativa': { color: '#dc2626', bg: '#fee2e2', border: '#fecaca' },
-  }
-
-  const getClasificacion = (valor) =>
-    clasificacionConfig[valor] || {
-      color: '#64748b',
-      bg: '#f1f5f9',
-      border: '#e0e6ef',
-    }
 
   const abrirModalEliminar = () => {
     setMostrarModalEliminar(true)
@@ -55,6 +33,7 @@ export default function Historial() {
     setMostrarModalEliminar(false)
   }
 
+  // Elimina al paciente y vuelve a la lista
   const eliminarPaciente = async () => {
     try {
       setEliminando(true)
@@ -76,6 +55,7 @@ export default function Historial() {
     setModalAnalisis({ abierto: false, id: null })
   }
 
+  // Elimina un análisis del historial y lo quita de la lista en pantalla
   const eliminarAnalisis = async () => {
     if (!modalAnalisis.id) return
 
@@ -131,7 +111,7 @@ export default function Historial() {
         {paciente && (
           <div style={s.actionsWrap}>
             <div style={s.pacienteChip}>
-              <div style={s.pacienteAvatar}>{iniciales(paciente)}</div>
+              <div style={s.pacienteAvatar}>{iniciales(paciente?.nombre, paciente?.apellido)}</div>
               <div>
                 <div style={s.pacienteNombre}>
                   {paciente.nombre} {paciente.apellido}
@@ -215,7 +195,7 @@ export default function Historial() {
           </div>
         ) : (
           historial.map((h, i) => {
-            const cfg = getClasificacion(h.clasificacion)
+            const cfg = getClasificacionBadge(h.clasificacion)
 
             return (
               <div
@@ -334,11 +314,7 @@ export default function Historial() {
 
 const s = {
   page: {
-    minHeight: '100vh',
-    background: '#f0f4f8',
-    backgroundImage:
-      'repeating-linear-gradient(135deg, rgba(22,49,85,0.035) 0px, rgba(22,49,85,0.035) 1px, transparent 1px, transparent 22px), repeating-linear-gradient(45deg, rgba(30,58,95,0.02) 0px, rgba(30,58,95,0.02) 1px, transparent 1px, transparent 28px), radial-gradient(circle at 12% 18%, rgba(30,58,95,0.08) 0px, rgba(30,58,95,0) 230px), radial-gradient(circle at 88% 82%, rgba(37,99,235,0.07) 0px, rgba(37,99,235,0) 220px)',
-    backgroundRepeat: 'repeat, repeat, no-repeat, no-repeat',
+    ...pageBackground,
     padding: '32px 36px 56px',
     fontFamily: "'Inter', 'Helvetica Neue', Arial, sans-serif",
   },

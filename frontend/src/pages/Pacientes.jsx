@@ -1,9 +1,13 @@
 import { useEffect, useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import api from '../api/axios'
+import usePacientes from '../hooks/usePacientes'
+import { iniciales } from '../utils/format'
+import { pageBackground } from '../theme/pageStyles'
 
+// Pantalla para buscar pacientes por DNI e iniciar la evaluación
 export default function Pacientes() {
-  const [pacientes, setPacientes] = useState([])
+  const { pacientes } = usePacientes()
   const [visible,  setVisible]    = useState(false)
 
   // Búsqueda por DNI (RENIEC)
@@ -16,12 +20,14 @@ export default function Pacientes() {
   const navigate = useNavigate()
 
   useEffect(() => {
-    api.get('pacientes').then(res => setPacientes(res.data)).catch(() => {})
-    setTimeout(() => setVisible(true), 80)
+    const t = setTimeout(() => setVisible(true), 80)
+    return () => clearTimeout(t)
   }, [])
 
+  // El DNI es válido si tiene exactamente 8 dígitos
   const dniValido = /^\d{8}$/.test(dni)
 
+  // Consulta los datos del DNI en RENIEC
   const buscar = async () => {
     if (!dniValido || buscando) return
     setBuscando(true)
@@ -38,6 +44,7 @@ export default function Pacientes() {
     }
   }
 
+  // Crea/recupera el paciente y abre el análisis de retina
   const realizarEvaluacion = async () => {
     if (!resultado || iniciando) return
     setIniciando(true)
@@ -56,9 +63,6 @@ export default function Pacientes() {
   const onKeyDownDni = (e) => {
     if (e.key === 'Enter') buscar()
   }
-
-  const iniciales = (nombre, apellido) =>
-    `${nombre?.[0] || ''}${apellido?.[0] || ''}`.toUpperCase()
 
   return (
     <div style={s.page}>
@@ -259,11 +263,7 @@ export default function Pacientes() {
 
 const s = {
   page: {
-    minHeight: '100vh',
-    background: '#f0f4f8',
-    backgroundImage:
-      'repeating-linear-gradient(135deg, rgba(22,49,85,0.035) 0px, rgba(22,49,85,0.035) 1px, transparent 1px, transparent 22px), repeating-linear-gradient(45deg, rgba(30,58,95,0.02) 0px, rgba(30,58,95,0.02) 1px, transparent 1px, transparent 28px), radial-gradient(circle at 12% 18%, rgba(30,58,95,0.08) 0px, rgba(30,58,95,0) 230px), radial-gradient(circle at 88% 82%, rgba(37,99,235,0.07) 0px, rgba(37,99,235,0) 220px)',
-    backgroundRepeat: 'repeat, repeat, no-repeat, no-repeat',
+    ...pageBackground,
     padding: '32px 36px 48px',
     fontFamily: "'Inter', 'Helvetica Neue', Arial, sans-serif",
   },

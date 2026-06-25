@@ -1,8 +1,8 @@
 import { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import PropTypes from 'prop-types'
-import { useAuth } from '../context/AuthContext'
-import api from '../api/axios'
+import { useAuth } from '../context/auth-context'
+import usePacientes from '../hooks/usePacientes'
 import uronImg from '../assets/uron.png'
 
 const mensajesUron = [
@@ -12,12 +12,14 @@ const mensajesUron = [
   'Un control ordenado mejora la atencion y la confianza del paciente.',
 ]
 
+// Devuelve el saludo según la hora del día
 function obtenerSaludo(hora) {
   if (hora < 12) return 'Buenos días'
   if (hora < 18) return 'Buenas tardes'
   return 'Buenas noches'
 }
 
+// Cambia el mensaje del asistente con una pequeña animación
 function rotarMensaje(setMsgIndex, setShowMsg) {
   setShowMsg(false)
   setTimeout(() => {
@@ -26,6 +28,7 @@ function rotarMensaje(setMsgIndex, setShowMsg) {
   }, 1400)
 }
 
+// Tarjeta reutilizable del panel principal
 function DashboardCard({ delay, visible, onClick, icon, chip, eyebrow, titulo, descripcion, hoverNote }) {
   return (
     <button
@@ -65,19 +68,24 @@ DashboardCard.propTypes = {
   hoverNote: PropTypes.node,
 }
 
+// Pantalla principal con el resumen y los accesos directos
 export default function Dashboard() {
-  const [totalPacientes, setTotalPacientes] = useState(0)
+  const { pacientes } = usePacientes()
+  // Total de pacientes que se muestra en la tarjeta
+  const totalPacientes = pacientes.length
   const [visible, setVisible] = useState(false)
   const [msgIndex, setMsgIndex] = useState(0)
   const [showMsg, setShowMsg] = useState(true)
   const { usuario } = useAuth()
   const navigate = useNavigate()
 
+  // Pequeña espera para la animación de entrada
   useEffect(() => {
-    api.get('pacientes').then(res => setTotalPacientes(res.data.length))
-    setTimeout(() => setVisible(true), 80)
+    const t = setTimeout(() => setVisible(true), 80)
+    return () => clearTimeout(t)
   }, [])
 
+  // Cambia el mensaje del asistente cada 8 segundos
   useEffect(() => {
     const id = setInterval(() => rotarMensaje(setMsgIndex, setShowMsg), 8000)
     return () => clearInterval(id)

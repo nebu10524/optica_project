@@ -38,6 +38,7 @@ function renderContenidoBotonRegistro(loading, exito) {
   )
 }
 
+// Pantalla para crear una cuenta nueva
 export default function Registro() {
   const [form, setForm] = useState({
     nombre: '',
@@ -53,8 +54,10 @@ export default function Registro() {
   const [showConf, setShowConf] = useState(false)
   const navigate = useNavigate()
 
+  // Actualiza el formulario cuando el usuario escribe en un campo
   const handleChange = e => setForm({ ...form, [e.target.name]: e.target.value })
 
+  // Revisa que los datos del formulario sean correctos antes de enviarlos
   const validar = () => {
     if (!form.nombre.trim() || !form.apellido.trim())
       return 'El nombre y apellido son obligatorios.'
@@ -67,13 +70,16 @@ export default function Registro() {
     return null
   }
 
+  // Se ejecuta al enviar el formulario de registro
   const handleSubmit = async (e) => {
     e.preventDefault()
+    // Primero validamos; si hay error, lo mostramos y no enviamos
     const err = validar()
     if (err) { setError(err); return }
     setError('')
     setLoading(true)
     try {
+      // Pedimos al backend que cree la cuenta
       await api.post('usuarios/registro', {
         nombre:   form.nombre.trim(),
         apellido: form.apellido.trim(),
@@ -81,6 +87,7 @@ export default function Registro() {
         password: form.password,
         rol:      'optometrista',
       })
+      // Mostramos éxito y redirigimos al dashboard a los 2 segundos
       setExito(true)
       setTimeout(() => navigate('/'), 2000)
     } catch (err) {
@@ -90,7 +97,7 @@ export default function Registro() {
     }
   }
 
-  // Fuerza de contraseña
+  // Calcula qué tan segura es la contraseña según su longitud y números
   const fuerzaPass = () => {
     const p = form.password
     if (!p) return null

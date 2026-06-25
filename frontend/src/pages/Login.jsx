@@ -1,7 +1,8 @@
 import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { useAuth } from '../context/AuthContext'
+import { useAuth } from '../context/auth-context'
 
+// Pantalla de inicio de sesión
 export default function Login() {
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
@@ -11,14 +12,17 @@ export default function Login() {
   const { login } = useAuth()
   const navigate = useNavigate()
 
+  // Se ejecuta al enviar el formulario de inicio de sesión
   const handleSubmit = async (e) => {
     e.preventDefault()
     setError('')
     setLoading(true)
     try {
+      // Si el login es correcto, vamos al dashboard
       await login(email, password)
       navigate('/')
     } catch {
+      // Si falla, mostramos un mensaje de error
       setError('Credenciales incorrectas. Verifica tu correo y contraseña.')
     } finally {
       setLoading(false)

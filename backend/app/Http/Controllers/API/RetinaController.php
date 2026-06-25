@@ -17,6 +17,7 @@ use Symfony\Component\HttpKernel\Exception\HttpException;
 
 class RetinaController extends Controller
 {
+    // Arma las cabeceras CORS para permitir que el frontend llame a esta ruta
     private function corsHeaders(Request $request): array
     {
         $origin = $request->headers->get('Origin');
@@ -47,23 +48,28 @@ class RetinaController extends Controller
         ];
     }
 
+    // POST /api/retina/analizar -> analiza la retinografía con IA y guarda el resultado
     public function analizar(Request $request)
     {
         $cors = $this->corsHeaders($request);
 
+        // Validamos que llegue una imagen válida y un paciente existente
         $request->validate([
             'imagen'      => 'required|image|mimes:jpg,jpeg,png|max:5120',
             'paciente_id' => 'required|integer|exists:pacientes,id',
         ]);
 
+        // Convertimos la imagen a base64 para enviarla a la IA
         $archivo  = $request->file('imagen');
         $base64   = base64_encode(file_get_contents($archivo->getRealPath()));
         $mimeType = $archivo->getMimeType();
 
+        // Instrucciones que recibe la IA y la clave de Gemini
         $prompt = $this->getPromptAnalisisRetina();
 
         $apiKey = config('services.gemini.key');
 
+        // Enviamos la imagen y el prompt a Gemini
         $response = Http::timeout(60)->post(
             "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key={$apiKey}",
             [
@@ -85,6 +91,7 @@ class RetinaController extends Controller
             ]
         );
 
+        // Si Gemini falla, registramos el error y respondemos 500
         if (!$response->successful()) {
             Log::error('Gemini error', [
                 'status' => $response->status(),
@@ -98,8 +105,10 @@ class RetinaController extends Controller
             ]));
         }
 
+        // Tomamos el texto que devolvió la IA
         $texto = $response->json('candidates.0.content.parts.0.text', '');
 
+        // Limpiamos posibles marcas de markdown y nos quedamos solo con el JSON
         $texto = preg_replace('/```json\s*/i', '', $texto);
         $texto = preg_replace('/```\s*/i', '', $texto);
         $texto = trim($texto);
@@ -108,8 +117,10 @@ class RetinaController extends Controller
             $texto = $matches[0];
         }
 
+        // Convertimos el texto JSON en un arreglo
         $reporte = json_decode($texto, true);
 
+        // Si la IA no devolvió un JSON válido, usamos un reporte vacío
         if (!$reporte) {
             Log::warning('IA devolvió JSON incompleto', [
                 'raw'        => $texto,
@@ -119,8 +130,10 @@ class RetinaController extends Controller
             $reporte = [];
         }
 
+        // Completamos con valores por defecto los campos que falten
         $reporte = array_replace_recursive($this->reportePorDefecto(), $reporte);
 
+        // Necesitamos saber qué usuario hizo el análisis
         $usuarioId = $request->user()?->id;
         if (!$usuarioId) {
             throw new HttpException(401, json_encode([
@@ -137,6 +150,7 @@ class RetinaController extends Controller
             // Guardar imagen en storage
             $rutaImagen = $archivo->storeAs('retinas', $nombreArchivo, 'public');
 
+            // Guardamos evaluación, imagen e historial juntos (todo o nada)
             DB::transaction(function () use (
                 $request,
                 $usuarioId,
@@ -190,6 +204,7 @@ class RetinaController extends Controller
                 ]);
             });
         } catch (\Throwable $e) {
+            // Si algo falla, borramos la imagen que ya se había guardado
             if ($rutaImagen && Storage::disk('public')->exists($rutaImagen)) {
                 Storage::disk('public')->delete($rutaImagen);
             }
@@ -210,6 +225,7 @@ class RetinaController extends Controller
             throw new HttpException(500, json_encode($payload));
         }
 
+        // Devolvemos el reporte y los identificadores creados
         return response()->json([
             'reporte'       => $reporte,
             'imagen_url'    => asset('storage/' . $rutaImagen),
@@ -220,6 +236,7 @@ class RetinaController extends Controller
         ], 200, $cors);
     }
 
+    // Texto de instrucciones que se le envía a la IA para analizar la retina
     private function getPromptAnalisisRetina(): string
     {
         return <<<'PROMPT'
@@ -299,6 +316,7 @@ Responde ÚNICAMENTE en este formato JSON exacto, sin texto adicional:
 PROMPT;
     }
 
+    // Reporte base que se usa cuando la IA no devuelve datos completos
     private function reportePorDefecto(): array
     {
         return [

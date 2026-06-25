@@ -14,6 +14,7 @@ import ReportesPdfPaciente from './pages/ReportesPdfPaciente'
 import AsistenteUron from './components/AsistenteUron'
 import 'bootstrap/dist/css/bootstrap.min.css'
 
+// Estructura común de las páginas internas: barra de navegación + contenido
 function Layout({ children }) {
   return (
     <>
@@ -29,14 +30,17 @@ Layout.propTypes = {
   children: PropTypes.node,
 }
 
+// Define todas las rutas de la aplicación
 function AppContent() {
   const location = useLocation()
 
+  // Sabemos en qué página estamos para mostrar el asistente Uron
   const enLogin    = location.pathname === '/login'
   const enRegistro = location.pathname === '/registro'
 
   return (
     <>
+      {/* El asistente Uron solo aparece en login y registro */}
       {enLogin    && <AsistenteUron modo="login" />}
       {enRegistro && <AsistenteUron modo="registro" />}
 
@@ -76,6 +80,7 @@ function AppContent() {
   )
 }
 
+// Componente raíz: envuelve todo con el router y el contexto de sesión
 export default function App() {
   return (
     <BrowserRouter>

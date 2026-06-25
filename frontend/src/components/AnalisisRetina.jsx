@@ -1,35 +1,7 @@
 import { useState, useRef } from 'react'
 import PropTypes from 'prop-types'
 import api from '../api/axios'
-
-// ── Colores por clasificación ────────────────────────────────────────────────
-const NIVEL_CONFIG = {
-  'Sin RD': {
-    color: '#22c55e', bg: '#f0fdf4', border: '#86efac',
-    icon: '✅', label: 'Sin Retinopatía Diabética', urgencia_color: '#16a34a'
-  },
-  'Leve': {
-    color: '#eab308', bg: '#fefce8', border: '#fde047',
-    icon: '🟡', label: 'Retinopatía Leve', urgencia_color: '#ca8a04'
-  },
-  'Moderada': {
-    color: '#f97316', bg: '#fff7ed', border: '#fdba74',
-    icon: '🟠', label: 'Retinopatía Moderada', urgencia_color: '#ea580c'
-  },
-  'Severa/Proliferativa': {
-    color: '#ef4444', bg: '#fef2f2', border: '#fca5a5',
-    icon: '🔴', label: 'Retinopatía Severa / Proliferativa', urgencia_color: '#dc2626'
-  },
-}
-
-const SIGNO_LABELS = {
-  microaneurismas:    'Microaneurismas',
-  hemorragias:        'Hemorragias retinianas',
-  exudados_duros:     'Exudados duros',
-  exudados_blandos:   'Exudados blandos (algodón)',
-  neovascularizacion: 'Neovascularización',
-  edema_macular:      'Edema macular',
-}
+import { NIVEL_CONFIG, SIGNO_LABELS } from '../constants/retinopatia'
 
 export default function AnalisisRetina({ pacienteId, nombrePaciente }) {
   const [imagen,    setImagen]    = useState(null)
@@ -39,6 +11,7 @@ export default function AnalisisRetina({ pacienteId, nombrePaciente }) {
   const [error,     setError]     = useState(null)
   const inputRef = useRef()
 
+  // Cuando el usuario elige una imagen, la mostramos en vista previa
   const handleImagen = (e) => {
     const file = e.target.files[0]
     if (!file) return
@@ -48,6 +21,7 @@ export default function AnalisisRetina({ pacienteId, nombrePaciente }) {
     setError(null)
   }
 
+  // Envía la imagen al backend para que la IA la analice
   const handleAnalizar = async () => {
     if (!imagen) return
     setCargando(true)
@@ -70,6 +44,7 @@ export default function AnalisisRetina({ pacienteId, nombrePaciente }) {
     }
   }
 
+  // Limpia todo para empezar un nuevo análisis
   const handleNuevo = () => {
     setImagen(null)
     setPreview(null)

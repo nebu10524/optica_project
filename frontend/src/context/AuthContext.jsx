@@ -1,9 +1,9 @@
-import { createContext, useCallback, useContext, useMemo, useState } from 'react'
+import { useCallback, useMemo, useState } from 'react'
 import PropTypes from 'prop-types'
 import api from '../api/axios'
+import { AuthContext } from './auth-context'
 
-const AuthContext = createContext(null)
-
+// Recupera el usuario guardado en el navegador (para mantener la sesión al recargar)
 const obtenerUsuarioGuardado = () => {
   try {
     const raw = localStorage.getItem('usuario')
@@ -13,9 +13,11 @@ const obtenerUsuarioGuardado = () => {
   }
 }
 
+// Provee a toda la app el usuario actual y las funciones de iniciar/cerrar sesión
 export function AuthProvider({ children }) {
   const [usuario, setUsuario] = useState(obtenerUsuarioGuardado)
 
+  // Inicia sesión: pide el token al backend y lo guarda en el navegador
   const login = useCallback(async (email, password) => {
     const res = await api.post('login', { email, password })
     localStorage.setItem('token', res.data.token)
@@ -23,6 +25,7 @@ export function AuthProvider({ children }) {
     setUsuario(res.data.usuario)
   }, [])
 
+  // Cierra sesión: avisa al backend y borra los datos guardados
   const logout = useCallback(async () => {
     await api.post('logout')
     localStorage.removeItem('token')
@@ -30,6 +33,7 @@ export function AuthProvider({ children }) {
     setUsuario(null)
   }, [])
 
+  // Lo que queda disponible para el resto de la app
   const value = useMemo(() => ({ usuario, login, logout }), [usuario, login, logout])
 
   return (
@@ -42,5 +46,3 @@ export function AuthProvider({ children }) {
 AuthProvider.propTypes = {
   children: PropTypes.node,
 }
-
-export const useAuth = () => useContext(AuthContext)

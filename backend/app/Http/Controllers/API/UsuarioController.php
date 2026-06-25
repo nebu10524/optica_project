@@ -8,9 +8,10 @@ use Illuminate\Support\Facades\Hash;
 
 class UsuarioController extends Controller
 {
-    // POST /api/usuarios/registro
+    // POST /api/usuarios/registro -> crea un nuevo usuario
     public function registro(Request $request)
     {
+        // Validamos los datos del formulario de registro
         $request->validate([
             'nombre'   => 'required|string|max:100',
             'apellido' => 'required|string|max:100',
@@ -18,6 +19,7 @@ class UsuarioController extends Controller
             'password' => 'required|min:6',
         ]);
 
+        // Creamos el usuario (la contraseña se guarda encriptada)
         $usuario = Usuario::create([
             'nombre'   => $request->nombre,
             'apellido' => $request->apellido,
@@ -27,6 +29,7 @@ class UsuarioController extends Controller
             'activo'   => 1,
         ]);
 
+        // Devolvemos el usuario creado
         return response()->json([
             'message' => 'Usuario registrado correctamente',
             'usuario' => [

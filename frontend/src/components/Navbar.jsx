@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { Link, useNavigate, useLocation } from 'react-router-dom'
-import { useAuth } from '../context/AuthContext'
+import { useAuth } from '../context/auth-context'
 
 export default function NavBar() {
   const { usuario, logout } = useAuth()
@@ -8,11 +8,13 @@ export default function NavBar() {
   const location = useLocation()
   const [menuOpen, setMenuOpen] = useState(false)
 
+  // Cierra la sesión y lleva al login
   const handleLogout = async () => {
     await logout()
     navigate('/login')
   }
 
+  // Indica si una ruta es la página actual (para resaltarla)
   const isActive = (path) => location.pathname === path
 
   const navLinks = [
@@ -40,7 +42,7 @@ export default function NavBar() {
     },
   ]
 
-  // Iniciales del usuario para el avatar
+  // Iniciales del usuario para mostrarlas en el avatar
   const iniciales = usuario?.nombre
     ? usuario.nombre.split(' ').map(n => n[0]).slice(0, 2).join('').toUpperCase()
     : 'U'

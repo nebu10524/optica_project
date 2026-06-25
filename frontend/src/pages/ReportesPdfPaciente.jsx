@@ -1,50 +1,9 @@
 import { useEffect, useMemo, useState } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 import api from '../api/axios'
-
-const NIVEL_CONFIG = {
-  'Sin RD': {
-    color: '#22c55e',
-    bg: '#f0fdf4',
-    border: '#86efac',
-    icon: '✅',
-    label: 'Sin Retinopatía Diabética',
-    urgencia_color: '#16a34a',
-  },
-  Leve: {
-    color: '#eab308',
-    bg: '#fefce8',
-    border: '#fde047',
-    icon: '🟡',
-    label: 'Retinopatía Leve',
-    urgencia_color: '#ca8a04',
-  },
-  Moderada: {
-    color: '#f97316',
-    bg: '#fff7ed',
-    border: '#fdba74',
-    icon: '🟠',
-    label: 'Retinopatía Moderada',
-    urgencia_color: '#ea580c',
-  },
-  'Severa/Proliferativa': {
-    color: '#ef4444',
-    bg: '#fef2f2',
-    border: '#fca5a5',
-    icon: '🔴',
-    label: 'Retinopatía Severa / Proliferativa',
-    urgencia_color: '#dc2626',
-  },
-}
-
-const SIGNO_LABELS = {
-  microaneurismas: 'Microaneurismas',
-  hemorragias: 'Hemorragias retinianas',
-  exudados_duros: 'Exudados duros',
-  exudados_blandos: 'Exudados blandos (algodón)',
-  neovascularizacion: 'Neovascularización',
-  edema_macular: 'Edema macular',
-}
+import { NIVEL_CONFIG, SIGNO_LABELS } from '../constants/retinopatia'
+import { formatFechaHora } from '../utils/format'
+import { pageBackground } from '../theme/pageStyles'
 
 const parseArraySafe = (value) => {
   if (Array.isArray(value)) return value
@@ -85,20 +44,19 @@ export default function ReportesPdfPaciente() {
   const [paciente, setPaciente] = useState(null)
   const [historial, setHistorial] = useState([])
   const [seleccion, setSeleccion] = useState(null)
-  const [cargando, setCargando] = useState(true)
+  // Arranca "cargando" solo si hay un id válido que pedir; si no, no hay nada que esperar.
+  const [cargando, setCargando] = useState(() => Boolean(getSafeNumericId(pacienteId)))
   const [descargando, setDescargando] = useState(false)
   const [tipoDescarga, setTipoDescarga] = useState(null)
   const [imagenBlobUrl, setImagenBlobUrl] = useState(null)
 
   useEffect(() => {
-    if (!pacienteIdSeguro) {
-      setCargando(false)
-      return
-    }
+    if (!pacienteIdSeguro) return
 
-    setCargando(true)
+    let activo = true
     Promise.all([api.get(`/pacientes/${pacienteIdSeguro}`), api.get(`/historial/${pacienteIdSeguro}`)])
       .then(([pRes, hRes]) => {
+        if (!activo) return
         setPaciente(pRes.data)
         // Importante: el backend ya ordena por fecha_analisis desc.
         // Evitamos re-ordenar en frontend para que "lo más reciente" coincida
@@ -107,7 +65,12 @@ export default function ReportesPdfPaciente() {
         setHistorial(arr)
         setSeleccion(arr[0] || null)
       })
-      .finally(() => setCargando(false))
+      .finally(() => {
+        if (activo) setCargando(false)
+      })
+    return () => {
+      activo = false
+    }
   }, [pacienteIdSeguro])
 
   const nombrePaciente = useMemo(() => {
@@ -115,6 +78,7 @@ export default function ReportesPdfPaciente() {
     return `${paciente.nombre || ''} ${paciente.apellido || ''}`.trim() || 'Paciente'
   }, [paciente])
 
+  // Descarga un archivo (blob) recibido del backend con el nombre indicado
   const descargarBlob = (blob, nombre) => {
     const url = globalThis.URL.createObjectURL(blob)
     const a = document.createElement('a')
@@ -126,6 +90,7 @@ export default function ReportesPdfPaciente() {
     globalThis.URL.revokeObjectURL(url)
   }
 
+  // Descarga el PDF con todo el historial del paciente
   const descargarHistorialPdf = async () => {
     if (!pacienteIdSeguro) return
 
@@ -140,6 +105,7 @@ export default function ReportesPdfPaciente() {
     }
   }
 
+  // Descarga el PDF solo del análisis que está seleccionado
   const descargarAnalisisSeleccionadoPdf = async () => {
     const historialIdSeguro = getSafeNumericId(rep?.id)
     if (!historialIdSeguro) return
@@ -159,6 +125,7 @@ export default function ReportesPdfPaciente() {
   const img = rep?.imagen
   const cfg = rep ? NIVEL_CONFIG[rep.clasificacion] || NIVEL_CONFIG['Sin RD'] : null
 
+  // Carga la imagen del análisis seleccionado y la libera al cambiar
   useEffect(() => {
     let activo = true
     let objectUrl = null
@@ -190,11 +157,6 @@ export default function ReportesPdfPaciente() {
   const hallazgos = parseArraySafe(img?.hallazgos)
   const signos = parseObjectSafe(img?.signos_rd)
   const recomendacion = img?.recomendacion || 'No disponible'
-
-  const formatFecha = (iso) =>
-    iso
-      ? new Date(iso).toLocaleString('es-PE', { day: '2-digit', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' })
-      : '—'
 
   return (
     <div style={s.page}>
@@ -239,7 +201,7 @@ export default function ReportesPdfPaciente() {
                 }}
               >
                 <div style={{ display: 'flex', justifyContent: 'space-between', gap: 10 }}>
-                  <div style={s.rowDate}>{formatFecha(h.fecha_analisis)}</div>
+                  <div style={s.rowDate}>{formatFechaHora(h.fecha_analisis)}</div>
                   <div style={s.rowBadge}>{h.urgencia}</div>
                 </div>
                 <div style={s.rowClass}>{h.clasificacion}</div>
@@ -320,11 +282,7 @@ export default function ReportesPdfPaciente() {
 
 const s = {
   page: {
-    minHeight: '100vh',
-    background: '#f0f4f8',
-    backgroundImage:
-      'repeating-linear-gradient(135deg, rgba(22,49,85,0.035) 0px, rgba(22,49,85,0.035) 1px, transparent 1px, transparent 22px), repeating-linear-gradient(45deg, rgba(30,58,95,0.02) 0px, rgba(30,58,95,0.02) 1px, transparent 1px, transparent 28px), radial-gradient(circle at 12% 18%, rgba(30,58,95,0.08) 0px, rgba(30,58,95,0) 230px), radial-gradient(circle at 88% 82%, rgba(37,99,235,0.07) 0px, rgba(37,99,235,0) 220px)',
-    backgroundRepeat: 'repeat, repeat, no-repeat, no-repeat',
+    ...pageBackground,
     padding: '28px 32px 44px',
   },
   header: { display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: 14, flexWrap: 'wrap' },

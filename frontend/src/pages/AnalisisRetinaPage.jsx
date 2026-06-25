@@ -1,11 +1,15 @@
 import { useEffect, useState } from 'react'
 import { useNavigate, useSearchParams } from 'react-router-dom'
-import api from '../api/axios'
 import AnalisisRetina from '../components/AnalisisRetina'
+import usePacientes from '../hooks/usePacientes'
+import { iniciales } from '../utils/format'
+import { pageBackground } from '../theme/pageStyles'
 
 export default function AnalisisRetinaPage() {
-  const [pacientes, setPacientes] = useState([])
-  const [pacienteSeleccionado, setPacienteSeleccionado] = useState(null)
+  const { pacientes } = usePacientes()
+  // undefined = sin elección manual (se autoselecciona por el paciente_id de la URL).
+  // null = el usuario pulsó "Cambiar paciente". Un objeto = paciente elegido a mano.
+  const [seleccionManual, setSeleccionManual] = useState(undefined)
   const [visible, setVisible] = useState(false)
 
   const navigate = useNavigate()
@@ -13,22 +17,16 @@ export default function AnalisisRetinaPage() {
   const pacienteIdUrl = searchParams.get('paciente_id')
 
   useEffect(() => {
-    api.get('pacientes').then(res => {
-      setPacientes(res.data)
+    const t = setTimeout(() => setVisible(true), 80)
+    return () => clearTimeout(t)
+  }, [])
 
-      if (pacienteIdUrl) {
-        const pacienteEncontrado = res.data.find(
-          p => String(p.id) === String(pacienteIdUrl)
-        )
-
-        if (pacienteEncontrado) {
-          setPacienteSeleccionado(pacienteEncontrado)
-        }
-      }
-    })
-
-    setTimeout(() => setVisible(true), 80)
-  }, [pacienteIdUrl])
+  const pacienteSeleccionado =
+    seleccionManual !== undefined
+      ? seleccionManual
+      : (pacienteIdUrl
+          ? pacientes.find(p => String(p.id) === String(pacienteIdUrl)) || null
+          : null)
 
   return (
     <div style={s.page}>
@@ -99,7 +97,7 @@ export default function AnalisisRetinaPage() {
                     type="button"
                     key={p.id}
                     className="pac-card"
-                    onClick={() => setPacienteSeleccionado(p)}
+                    onClick={() => setSeleccionManual(p)}
                     style={{
                       ...s.pacCard,
                       opacity: visible ? 1 : 0,
@@ -108,7 +106,7 @@ export default function AnalisisRetinaPage() {
                     }}
                   >
                     <div style={s.avatar}>
-                      {`${p.nombre?.[0] || ''}${p.apellido?.[0] || ''}`.toUpperCase()}
+                      {iniciales(p.nombre, p.apellido)}
                     </div>
 
                     <div style={{ flex: 1 }}>
@@ -138,7 +136,7 @@ export default function AnalisisRetinaPage() {
             <div style={s.selectedBar}>
               <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
                 <div style={s.avatar}>
-                  {`${pacienteSeleccionado.nombre?.[0] || ''}${pacienteSeleccionado.apellido?.[0] || ''}`.toUpperCase()}
+                  {iniciales(pacienteSeleccionado.nombre, pacienteSeleccionado.apellido)}
                 </div>
 
                 <div>
@@ -152,7 +150,7 @@ export default function AnalisisRetinaPage() {
               </div>
 
               <button
-                onClick={() => setPacienteSeleccionado(null)}
+                onClick={() => setSeleccionManual(null)}
                 style={s.cambiarBtn}
               >
                 Cambiar paciente
@@ -172,11 +170,7 @@ export default function AnalisisRetinaPage() {
 
 const s = {
   page: {
-    minHeight: '100vh',
-    background: '#f0f4f8',
-    backgroundImage:
-      'repeating-linear-gradient(135deg, rgba(22,49,85,0.035) 0px, rgba(22,49,85,0.035) 1px, transparent 1px, transparent 22px), repeating-linear-gradient(45deg, rgba(30,58,95,0.02) 0px, rgba(30,58,95,0.02) 1px, transparent 1px, transparent 28px), radial-gradient(circle at 12% 18%, rgba(30,58,95,0.08) 0px, rgba(30,58,95,0) 230px), radial-gradient(circle at 88% 82%, rgba(37,99,235,0.07) 0px, rgba(37,99,235,0) 220px)',
-    backgroundRepeat: 'repeat, repeat, no-repeat, no-repeat',
+    ...pageBackground,
     fontFamily: "'Inter', 'Helvetica Neue', Arial, sans-serif",
   },
   content: {
